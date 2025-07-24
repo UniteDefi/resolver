@@ -1,0 +1,33 @@
+{
+  "deployments": [
+    {
+      "network": "Ethereum Sepolia",
+      "chainId": 11155111,
+      "address": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "transactionHash": "0xf6ae67966240e161141e766d8f1ea3f7122b62e57da1825263f3019e8d0cf2f0",
+      "explorer": "https://sepolia.etherscan.io/address/0x66AEACCcF67b99E96831f60F821377010aF9B763"
+    },
+    {
+      "network": "Base Sepolia",
+      "chainId": 84532,
+      "address": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "transactionHash": "0x784cb1ade7d810bf04393752bfb013794aca12ecf4a484d273381c3942aa49eb",
+      "explorer": "https://sepolia.basescan.org/address/0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9"
+    },
+    {
+      "network": "Polygon Amoy",
+      "chainId": 80002,
+      "address": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "transactionHash": "0x3150eb95b262fdd8954c3c1c59357ca5e28639264106704d8625d4ef32d44006",
+      "explorer": "https://amoy.polygonscan.com/address/0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9"
+    },
+    {
+      "network": "Arbitrum Sepolia",
+      "chainId": 421614,
+      "address": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "transactionHash": "0xe99c500cfe842b283a8b4c5e1e6e61137f0b6a704b42811f4016510992bd2659",
+      "explorer": "https://sepolia.arbiscan.io/address/0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9"
+    }
+  ],
+  "deployer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35"
+}

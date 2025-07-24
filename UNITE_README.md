@@ -8,25 +8,34 @@ Dutch auction-based cross-chain swap protocol built on 1inch Fusion+ model.
 - Created template branch with original 1inch example
 - Implemented DutchAuction.sol with linear price decrease
 - Created UniteResolver.sol extending base Resolver
-- Added multi-chain support (Ethereum, Polygon, BSC, Arbitrum)
+- Added multi-chain support (Ethereum, Polygon, Base, Arbitrum)
 - Written foundry tests for DutchAuction
 - Created TypeScript integration tests
+- **Deployed SimpleDutchAuction to all testnets** ✨
+
+### 📍 Deployed Contracts
+
+| Network | Address | Explorer |
+|---------|---------|----------|
+| Ethereum Sepolia | `0x66AEACCcF67b99E96831f60F821377010aF9B763` | [View](https://sepolia.etherscan.io/address/0x66AEACCcF67b99E96831f60F821377010aF9B763) |
+| Base Sepolia | `0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9` | [View](https://sepolia.basescan.org/address/0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9) |
+| Polygon Amoy | `0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9` | [View](https://amoy.polygonscan.com/address/0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9) |
+| Arbitrum Sepolia | `0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9` | [View](https://sepolia.arbiscan.io/address/0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9) |
+
+Deployer: `0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35`
 
 ### 🚧 TODO
-1. **Fix Foundry Dependencies**
-   - Install OpenZeppelin and other dependencies properly
-   - Run: `forge install OpenZeppelin/openzeppelin-contracts`
-   - Run: `forge install 1inch/limit-order-protocol`
+1. **Deploy UniteResolver**
+   - Fix dependencies for complex resolver
+   - Deploy to all chains
    
-2. **Complete Testing**
-   - Fix compilation issues
-   - Run tests on all 4 chains
-   - Verify cross-chain functionality
+2. **Contract Verification**
+   - Verify on block explorers
+   - Create interaction examples
 
-3. **Deploy Contracts**
-   - Deploy DutchAuction on each chain
-   - Deploy UniteResolver on each chain
-   - Verify contracts on explorers
+3. **Integration Testing**
+   - Test auction creation/settlement
+   - Test cross-chain flows
 
 4. **API Development** (if time permits)
    - REST endpoints for auction creation

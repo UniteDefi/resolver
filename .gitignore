@@ -132,3 +132,4 @@ dist
 
 cache
 .idea
+.env.deployment
