@@ -11,3 +11,15 @@ eth-rpc-url = 'http://localhost:8545'
 fs_permissions = [{ access = "read", path = "dist/contracts" }, { access = "read-write", path = ".forge-snapshots/" }]
 
 extra_output = ['storageLayout']
+
+[rpc_endpoints]
+monad = "https://testnet-rpc.monad.xyz/"
+base_sepolia = "https://sepolia.base.org"
+
+[profile.monad]
+eth-rpc-url = "https://testnet-rpc.monad.xyz/"
+chain-id = 10143
+
+[profile.base_sepolia]
+eth-rpc-url = "https://sepolia.base.org"
+chain-id = 84532

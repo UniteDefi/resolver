@@ -1,6 +1,6 @@
 [submodule "contracts/lib/cross-chain-swap"]
 	path = contracts/lib/cross-chain-swap
-	url = https://github.com/1inch/cross-chain-swap
+	url = https://github.com/1inch/cross-chain-swap.git
 	branch = master
 [submodule "contracts/lib/forge-std"]
 	path = contracts/lib/forge-std
