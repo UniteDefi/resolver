@@ -133,3 +133,5 @@ dist
 cache
 .idea
 .env.deployment
+.env.test
+generated_wallets.txt
