@@ -11,3 +11,15 @@ eth-rpc-url = 'http://localhost:8545'
 fs_permissions = [{ access = "read", path = "dist/contracts" }, { access = "read-write", path = ".forge-snapshots/" }]
 
 extra_output = ['storageLayout']
+
+[rpc_endpoints]
+etherlink = "https://node.ghostnet.etherlink.com"
+base_sepolia = "https://sepolia.base.org"
+
+[profile.etherlink]
+eth-rpc-url = "https://node.ghostnet.etherlink.com"
+chain-id = 128123
+
+[profile.base_sepolia]
+eth-rpc-url = "https://sepolia.base.org"
+chain-id = 84532
