@@ -2,7 +2,7 @@ use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near, AccountId, Balance, Gas, PanicOnDefault, Promise, Timestamp};
+use near_sdk::{env, near, AccountId, Balance, Gas, PanicOnDefault, Promise, Timestamp, NearToken};
 
 pub const TGAS: u64 = 1_000_000_000_000;
 pub const NO_DEPOSIT: Balance = 0;
