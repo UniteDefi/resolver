@@ -4,7 +4,7 @@ module unite_defi::htlc_escrow {
     use aptos_framework::coin::{Self, Coin};
     use aptos_framework::aptos_coin::AptosCoin;
     use aptos_framework::timestamp;
-    use aptos_std::aptos_hash;
+    use aptos_std::hash;
     use unite_defi::events;
 
     friend unite_defi::escrow_factory;
@@ -98,7 +98,7 @@ module unite_defi::htlc_escrow {
         assert!(!escrow.is_withdrawn, E_ALREADY_WITHDRAWN);
         assert!(!escrow.is_cancelled, E_ALREADY_CANCELLED);
         
-        let secret_hash = aptos_hash::sha3_256(secret);
+        let secret_hash = hash::sha3_256(secret);
         assert!(secret_hash == escrow.hashlock, E_INVALID_SECRET);
         
         if (current_time <= escrow.withdrawal_deadline) {
