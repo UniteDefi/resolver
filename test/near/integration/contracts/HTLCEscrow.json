@@ -1,0 +1,187 @@
+{
+  "contractName": "HTLCEscrow",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "name": "_recipient",
+          "type": "address"
+        },
+        {
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
+          "name": "_hashlock",
+          "type": "bytes32"
+        },
+        {
+          "name": "_timelock",
+          "type": "uint256"
+        }
+      ],
+      "name": "createHTLC",
+      "outputs": [
+        {
+          "name": "htlcId",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "_htlcId",
+          "type": "bytes32"
+        },
+        {
+          "name": "_preimage",
+          "type": "bytes32"
+        }
+      ],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "_htlcId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "refund",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "_htlcId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getHTLC",
+      "outputs": [
+        {
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "name": "hashlock",
+          "type": "bytes32"
+        },
+        {
+          "name": "timelock",
+          "type": "uint256"
+        },
+        {
+          "name": "withdrawn",
+          "type": "bool"
+        },
+        {
+          "name": "refunded",
+          "type": "bool"
+        },
+        {
+          "name": "preimage",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "htlcId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "hashlock",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "timelock",
+          "type": "uint256"
+        }
+      ],
+      "name": "HTLCCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "htlcId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "preimage",
+          "type": "bytes32"
+        }
+      ],
+      "name": "HTLCWithdrawn",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "htlcId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "HTLCRefunded",
+      "type": "event"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b50611234567890"
+}

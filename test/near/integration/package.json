@@ -1,0 +1,29 @@
+{
+  "name": "near-base-htlc-integration",
+  "version": "1.0.0",
+  "description": "Near <> Base Sepolia HTLC integration tests",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -r ts-node/register tests/**/*.test.ts",
+    "build": "tsc",
+    "compile-contracts": "ts-node scripts/compile-contracts.ts",
+    "deploy-near": "ts-node scripts/deploy-near.ts",
+    "deploy-base": "ts-node scripts/deploy-base.ts",
+    "deploy-all": "yarn deploy-near && yarn deploy-base",
+    "test:integration": "yarn test"
+  },
+  "dependencies": {
+    "near-api-js": "^4.0.0",
+    "ethers": "^6.13.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/chai": "^4.3.0",
+    "mocha": "^10.0.0",
+    "chai": "^4.3.0"
+  }
+}
