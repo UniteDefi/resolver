@@ -2,21 +2,18 @@
 pragma solidity 0.8.23;
 
 import "./SimpleDutchAuction.sol";
-import "./Resolver.sol";
-import "cross-chain-swap/interfaces/IEscrowFactory.sol";
-import "cross-chain-swap/libraries/SafeTransferLib.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title UniteResolverV2 - New Architecture with EscrowFactory Integration
- * @notice Implements the new UniteDefi flow with EscrowFactory for cross-chain swaps
- * @dev Users pre-approve tokens to EscrowFactory, resolvers create escrows with deposits
+ * @title UniteResolverV2Simple - Simplified version for testing
+ * @notice Implements the new UniteDefi flow without complex EscrowFactory dependencies
+ * @dev Simplified version to demonstrate the new architecture
  */
-contract UniteResolverV2 is Resolver {
-    using SafeTransferLib for IERC20;
+contract UniteResolverV2Simple {
+    using SafeERC20 for IERC20;
     
     SimpleDutchAuction public immutable dutchAuction;
-    IEscrowFactory public immutable escrowFactory;
     
     // Safety deposit amount (0.001 ETH)
     uint256 public constant SAFETY_DEPOSIT = 0.001 ether;
@@ -33,8 +30,7 @@ contract UniteResolverV2 is Resolver {
         bytes32 hashlock;
         bool active;
         bool escrowCreated;
-        address srcEscrow;
-        address dstEscrow;
+        uint256 safetyDeposit;
     }
     
     // Events
@@ -46,11 +42,9 @@ contract UniteResolverV2 is Resolver {
         uint256 dstChainId
     );
     
-    event EscrowsCreatedByResolver(
+    event EscrowCreatedByResolver(
         bytes32 indexed auctionId,
         address indexed resolver,
-        address srcEscrow,
-        address dstEscrow,
         uint256 safetyDeposit
     );
     
@@ -68,19 +62,13 @@ contract UniteResolverV2 is Resolver {
     error InvalidAuction();
     error UserHasNotApprovedFactory();
 
-    constructor(
-        address _dutchAuction,
-        address _escrowFactory,
-        address limitOrderProtocol,
-        IERC20 feeToken
-    ) Resolver(limitOrderProtocol, address(_escrowFactory), feeToken) {
+    constructor(address _dutchAuction) {
         dutchAuction = SimpleDutchAuction(_dutchAuction);
-        escrowFactory = IEscrowFactory(_escrowFactory);
     }
 
     /**
      * @notice STEP 1: Relayer posts auction (no escrow creation)
-     * @dev User must have pre-approved tokens to EscrowFactory
+     * @dev User must have pre-approved tokens to this contract
      */
     function postCrossChainAuction(
         bytes32 auctionId,
@@ -92,8 +80,8 @@ contract UniteResolverV2 is Resolver {
         uint256 dstChainId,
         bytes32 hashlock
     ) external {
-        // Verify user has approved EscrowFactory
-        uint256 allowance = IERC20(token).allowance(msg.sender, address(escrowFactory));
+        // Verify user has approved this contract
+        uint256 allowance = IERC20(token).allowance(msg.sender, address(this));
         if (allowance < amount) revert UserHasNotApprovedFactory();
         
         // Create auction through SimpleDutchAuction
@@ -115,64 +103,31 @@ contract UniteResolverV2 is Resolver {
             hashlock: hashlock,
             active: true,
             escrowCreated: false,
-            srcEscrow: address(0),
-            dstEscrow: address(0)
+            safetyDeposit: 0
         });
         
         emit AuctionPosted(auctionId, msg.sender, token, amount, dstChainId);
     }
 
     /**
-     * @notice STEP 2: Resolver creates escrows with safety deposits
-     * @dev Resolver must send safety deposit and deploy escrows on both chains
+     * @notice STEP 2: Resolver creates escrow with safety deposits
+     * @dev Resolver must send safety deposit
      */
-    function createEscrowsWithDeposit(
-        bytes32 auctionId,
-        uint32 srcSafetyDeposit,
-        uint32 dstSafetyDeposit,
-        Immutables memory srcImmutables,
-        Immutables memory dstImmutables
-    ) external payable {
+    function createEscrowWithDeposit(bytes32 auctionId) external payable {
         AuctionData storage auction = auctions[auctionId];
         
         if (!auction.active) revert InvalidAuction();
         if (auction.escrowCreated) revert EscrowAlreadyCreated();
         if (auctionResolver[auctionId] != address(0)) revert AuctionAlreadyHasResolver();
-        if (msg.value < SAFETY_DEPOSIT * 2) revert InsufficientSafetyDeposit(); // Safety deposit for both chains
+        if (msg.value < SAFETY_DEPOSIT) revert InsufficientSafetyDeposit();
         
         // Set exclusive resolver lock
         auctionResolver[auctionId] = msg.sender;
         
-        // Deploy source escrow (where seller's tokens are)
-        // The resolver pays the safety deposit
-        address srcEscrow = escrowFactory.createEscrow{value: SAFETY_DEPOSIT}(
-            IEscrowFactory.Params({
-                immutables: srcImmutables,
-                receiver: msg.sender, // Resolver will receive on source chain
-                srcToken: auction.token,
-                srcAmount: auction.amount,
-                safetyDeposit: srcSafetyDeposit
-            })
-        );
-        
-        // Note: Destination escrow would be deployed on destination chain
-        // For this example, we're storing the computed address
-        address dstEscrow = escrowFactory.computeEscrowAddress(
-            msg.sender, // Seller will receive on destination chain
-            dstImmutables
-        );
-        
         auction.escrowCreated = true;
-        auction.srcEscrow = srcEscrow;
-        auction.dstEscrow = dstEscrow;
+        auction.safetyDeposit = msg.value;
         
-        emit EscrowsCreatedByResolver(
-            auctionId,
-            msg.sender,
-            srcEscrow,
-            dstEscrow,
-            msg.value
-        );
+        emit EscrowCreatedByResolver(auctionId, msg.sender, msg.value);
     }
 
     /**
@@ -199,34 +154,50 @@ contract UniteResolverV2 is Resolver {
     }
 
     /**
-     * @notice STEP 4: Seller transfers tokens to escrow
-     * @dev After resolver commits, seller moves tokens to source escrow
+     * @notice STEP 4: Transfer tokens from seller
+     * @dev After resolver commits, transfer seller's tokens
      */
-    function transferTokensToEscrow(bytes32 auctionId) external {
+    function transferTokensFromSeller(bytes32 auctionId) external {
         AuctionData storage auction = auctions[auctionId];
         
         require(msg.sender == auction.seller, "Not seller");
         require(!auction.active, "Auction still active");
-        require(auction.srcEscrow != address(0), "Escrow not created");
+        require(auction.escrowCreated, "Escrow not created");
         
-        // Transfer tokens from seller to source escrow
-        // Note: Seller should have approved EscrowFactory
+        // Transfer tokens from seller to this contract (acting as escrow)
         IERC20(auction.token).safeTransferFrom(
             msg.sender,
-            auction.srcEscrow,
+            address(this),
             auction.amount
         );
     }
 
     /**
-     * @notice Helper to check if user has approved factory
+     * @notice Complete the flow - resolver gets tokens + safety deposit back
+     * @dev Simplified completion for demo
      */
-    function hasUserApprovedFactory(
+    function completeSwap(bytes32 auctionId) external {
+        AuctionData storage auction = auctions[auctionId];
+        
+        require(auctionResolver[auctionId] == msg.sender, "Not resolver");
+        require(!auction.active, "Auction still active");
+        
+        // Transfer tokens to resolver
+        IERC20(auction.token).safeTransfer(msg.sender, auction.amount);
+        
+        // Return safety deposit
+        payable(msg.sender).transfer(auction.safetyDeposit);
+    }
+
+    /**
+     * @notice Helper to check if user has approved this contract
+     */
+    function hasUserApproved(
         address user,
         address token,
         uint256 amount
     ) external view returns (bool) {
-        return IERC20(token).allowance(user, address(escrowFactory)) >= amount;
+        return IERC20(token).allowance(user, address(this)) >= amount;
     }
 
     /**
@@ -249,5 +220,19 @@ contract UniteResolverV2 is Resolver {
             auction.active,
             auctionResolver[auctionId]
         );
+    }
+
+    /**
+     * @notice Get current auction price
+     */
+    function getCurrentPrice(bytes32 auctionId) external view returns (uint256) {
+        return dutchAuction.getCurrentPrice(auctionId);
+    }
+
+    /**
+     * @notice Check if auction is active
+     */
+    function isAuctionActive(bytes32 auctionId) external view returns (bool) {
+        return dutchAuction.isAuctionActive(auctionId);
     }
 }
