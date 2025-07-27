@@ -1,6 +1,6 @@
 module unite_defi::dutch_auction {
     use std::signer;
-    use aptos_framework::coin::{Self, Coin};
+    use aptos_framework::coin;
     use aptos_framework::timestamp;
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::account;
@@ -137,7 +137,7 @@ module unite_defi::dutch_auction {
     public entry fun settle_auction<CoinType>(
         buyer: &signer,
         auction_id: u64,
-        payment: Coin<CoinType>,
+        payment_amount: u64,
     ) acquires AuctionStore {
         let buyer_addr = signer::address_of(buyer);
         assert!(exists<AuctionStore>(@unite_defi), E_NOT_INITIALIZED);
@@ -151,12 +151,20 @@ module unite_defi::dutch_auction {
         let current_time = timestamp::now_seconds();
         assert!(current_time - auction.start_time <= auction.duration, E_AUCTION_EXPIRED);
         
-        let current_price = get_current_price(auction_id);
-        let payment_amount = coin::value(&payment);
+        // Calculate current price inline to avoid borrowing conflict
+        let elapsed_time = current_time - auction.start_time;
+        let current_price = if (elapsed_time >= auction.duration) {
+            auction.end_price
+        } else {
+            let price_decrease = ((auction.start_price - auction.end_price) * elapsed_time) / auction.duration;
+            auction.start_price - price_decrease
+        };
         assert!(payment_amount >= current_price, E_INSUFFICIENT_PAYMENT);
         
         auction.active = false;
         
+        // Withdraw payment from buyer and deposit to seller
+        let payment = coin::withdraw<CoinType>(buyer, payment_amount);
         coin::deposit(auction.seller, payment);
         
         event::emit_event(&mut auction_store.auction_settled_events, AuctionSettledEvent {
