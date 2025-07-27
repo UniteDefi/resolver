@@ -1,0 +1,7 @@
+{
+  "base_sepolia": {
+    "crossChainTokenAuction": "0x3722Cc2778acDf236a8066B7FAd7a5DcDb1cc7c1",
+    "deployer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
+    "timestamp": "2025-07-27T09:28:41.362Z"
+  }
+}
