@@ -1,0 +1,126 @@
+{
+  "network": "shasta",
+  "generatedAt": "2025-07-27T13:32:09.253Z",
+  "addresses": [
+    {
+      "id": 1,
+      "role": "deployer",
+      "privateKey": "0x721d42dad575a4d4a6a7d2894ad8aab11c406fe30a51a65641d7ece65c32dcd6",
+      "address": "Ta51926e448b42c54ef143df55587b915",
+      "note": "Address placeholder - will be derived when TronWeb is properly configured",
+      "funded": false,
+      "balance": 0
+    },
+    {
+      "id": 2,
+      "role": "user",
+      "privateKey": "0x4a8d94045abaed7d0ceb1dc401432edefe410a15429d8b0c81ad1e41864e981e",
+      "address": "Ta28ca972072e9fb654053e0a099fb7f7",
+      "note": "Address placeholder - will be derived when TronWeb is properly configured",
+      "funded": false,
+      "balance": 0
+    },
+    {
+      "id": 3,
+      "role": "resolver",
+      "privateKey": "0x1b3a4d42a0612eea386c5ba4e85221ec451705934a3d03dce4f766a86aebb4da",
+      "address": "T6fb880142d14b8a72b7fb7c610819e10",
+      "note": "Address placeholder - will be derived when TronWeb is properly configured",
+      "funded": false,
+      "balance": 0
+    },
+    {
+      "id": 4,
+      "role": "funder",
+      "privateKey": "0xe12df518151de89649735c1ba2c111642b645147fe7268667ae9bbec395ab8b2",
+      "address": "T3457a257062f7c75d930d7170de0a833",
+      "note": "Address placeholder - will be derived when TronWeb is properly configured",
+      "funded": false,
+      "balance": 0
+    },
+    {
+      "id": 5,
+      "role": "backup",
+      "privateKey": "0xab7faa5bfb8e4bd70b80f71c29e249d9a9bafa779a9746d0de38dfef721b4f21",
+      "address": "T73525e7c68acbd9bc1123211aaee19a4",
+      "note": "Address placeholder - will be derived when TronWeb is properly configured",
+      "funded": false,
+      "balance": 0
+    }
+  ],
+  "warning": "These are placeholder addresses for private key generation. Real addresses will be derived from private keys when using TronWeb.",
+  "instructions": {
+    "fundedAddress": "TQQzhiSNs3vrR4W6Dab9jnHpCmgupfYTKt",
+    "privateKey": "0xe12df518151de89649735c1ba2c111642b645147fe7268667ae9bbec395ab8b2",
+    "nextSteps": [
+      "1. Use the funded FUNDER address to distribute TRX to other addresses",
+      "2. Derive real Tron addresses from the other private keys",
+      "3. Update the addresses in test files",
+      "4. Run the relayer-orchestrated cross-chain tests"
+    ]
+  },
+  "fundingInfo": {
+    "fundedAddress": "TQQzhiSNs3vrR4W6Dab9jnHpCmgupfYTKt",
+    "fundedPrivateKey": "0xe12df518151de89649735c1ba2c111642b645147fe7268667ae9bbec395ab8b2",
+    "fundedAmount": "1000000000",
+    "network": "shasta"
+  },
+  "addressesWithFunding": [
+    {
+      "id": 1,
+      "role": "deployer",
+      "privateKey": "0x721d42dad575a4d4a6a7d2894ad8aab11c406fe30a51a65641d7ece65c32dcd6",
+      "address": "Ta51926e448b42c54ef143df55587b915",
+      "note": "Placeholder - derive real address from private key",
+      "funded": false,
+      "balance": "0",
+      "derivedAddress": "T0DEBCD6294859B893414B06A5C60DD88C",
+      "actualAddress": "PLACEHOLDER_T0DEBCD6294859B893414B06A5C60DD88C"
+    },
+    {
+      "id": 2,
+      "role": "user",
+      "privateKey": "0x4a8d94045abaed7d0ceb1dc401432edefe410a15429d8b0c81ad1e41864e981e",
+      "address": "Ta28ca972072e9fb654053e0a099fb7f7",
+      "note": "Placeholder - derive real address from private key",
+      "funded": false,
+      "balance": "0",
+      "derivedAddress": "T3BE9AA6702CB6CDA41439498D9335CC28",
+      "actualAddress": "PLACEHOLDER_T3BE9AA6702CB6CDA41439498D9335CC28"
+    },
+    {
+      "id": 3,
+      "role": "resolver",
+      "privateKey": "0x1b3a4d42a0612eea386c5ba4e85221ec451705934a3d03dce4f766a86aebb4da",
+      "address": "T6fb880142d14b8a72b7fb7c610819e10",
+      "note": "Placeholder - derive real address from private key",
+      "funded": false,
+      "balance": "0",
+      "derivedAddress": "TCA7F56CE0F0C3FE9103AB0787A7C30319",
+      "actualAddress": "PLACEHOLDER_TCA7F56CE0F0C3FE9103AB0787A7C30319"
+    },
+    {
+      "id": 4,
+      "role": "funder",
+      "privateKey": "0xe12df518151de89649735c1ba2c111642b645147fe7268667ae9bbec395ab8b2",
+      "address": "T3457a257062f7c75d930d7170de0a833",
+      "note": "Real funded address from user",
+      "funded": true,
+      "balance": "1000000000",
+      "derivedAddress": "TQQzhiSNs3vrR4W6Dab9jnHpCmgupfYTKt",
+      "actualAddress": "TQQzhiSNs3vrR4W6Dab9jnHpCmgupfYTKt"
+    },
+    {
+      "id": 5,
+      "role": "backup",
+      "privateKey": "0xab7faa5bfb8e4bd70b80f71c29e249d9a9bafa779a9746d0de38dfef721b4f21",
+      "address": "T73525e7c68acbd9bc1123211aaee19a4",
+      "note": "Placeholder - derive real address from private key",
+      "funded": false,
+      "balance": "0",
+      "derivedAddress": "TF0CE986BFAC43E6820413C9E6B1C49159",
+      "actualAddress": "PLACEHOLDER_TF0CE986BFAC43E6820413C9E6B1C49159"
+    }
+  ],
+  "updatedAt": "2025-07-27T14:47:51.012Z"
+}
