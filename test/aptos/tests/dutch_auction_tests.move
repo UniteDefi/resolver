@@ -1,8 +1,9 @@
 #[test_only]
 module unite_defi::dutch_auction_tests {
-    use std::vector;
+    use std::string;
+    use std::signer;
     use aptos_framework::coin;
-    use aptos_framework::aptos_coin::{Self, AptosCoin};
+    use aptos_framework::aptos_coin;
     use aptos_framework::timestamp;
     use aptos_framework::account;
     use unite_defi::dutch_auction;
