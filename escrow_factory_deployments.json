@@ -1,0 +1,16 @@
+{
+  "BASE_SEPOLIA": {
+    "chainId": 84532,
+    "escrowFactory": "0xd65eB2D57FfcC321eE5D5Ac7E97C7c162a6159de",
+    "relayer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
+    "deployer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
+    "timestamp": "2025-07-27T10:00:00.000Z"
+  },
+  "ARBITRUM_SEPOLIA": {
+    "chainId": 421614,
+    "escrowFactory": "0xd65eB2D57FfcC321eE5D5Ac7E97C7c162a6159de",
+    "relayer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
+    "deployer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
+    "timestamp": "2025-07-27T10:00:00.000Z"
+  }
+}
