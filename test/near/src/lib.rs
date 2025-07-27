@@ -1,2 +1,1 @@
-pub mod dutch_auction;
-pub mod htlc_escrow;
+// Empty lib.rs for WASM compilation

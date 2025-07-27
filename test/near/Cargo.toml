@@ -30,18 +30,4 @@ debug = false
 panic = "abort"
 overflow-checks = true
 
-[[bin]]
-name = "dutch_auction"
-path = "src/dutch_auction.rs"
-
-[[bin]]
-name = "htlc_escrow"
-path = "src/htlc_escrow.rs"
-
-[[bin]]
-name = "relayer_contract"
-path = "src/relayer_contract.rs"
-
-[[bin]]
-name = "near_escrow"
-path = "src/near_escrow.rs"
+# Build contracts as library
