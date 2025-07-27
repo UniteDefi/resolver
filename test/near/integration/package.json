@@ -4,26 +4,30 @@
   "description": "Near <> Base Sepolia HTLC integration tests",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -r ts-node/register tests/**/*.test.ts",
+    "test": "mocha -r ts-node/register tests/**/*.test.ts --timeout 120000",
+    "test:relayer": "mocha -r ts-node/register tests/full-relayer-flow.test.ts --timeout 60000",
+    "test:rescue": "mocha -r ts-node/register tests/timeout-rescue.test.ts --timeout 120000",
+    "test:old": "mocha -r ts-node/register tests/cross-chain-htlc.test.ts --timeout 60000",
     "build": "tsc",
     "compile-contracts": "ts-node scripts/compile-contracts.ts",
-    "deploy-near": "ts-node scripts/deploy-near.ts",
+    "deploy-near": "ts-node scripts/deploy-near.ts", 
     "deploy-base": "ts-node scripts/deploy-base.ts",
     "deploy-all": "yarn deploy-near && yarn deploy-base",
+    "test:infrastructure": "ts-node test-infrastructure.ts",
     "test:integration": "yarn test"
   },
   "dependencies": {
-    "near-api-js": "^4.0.0",
-    "ethers": "^6.13.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
+    "dotenv": "^16.0.0",
+    "ethers": "^6.13.0",
+    "near-api-js": "^4.0.0",
     "ts-node": "^10.9.0",
-    "dotenv": "^16.0.0"
+    "typescript": "^5.0.0"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.0",
     "@types/chai": "^4.3.0",
-    "mocha": "^10.0.0",
-    "chai": "^4.3.0"
+    "@types/mocha": "^10.0.0",
+    "chai": "^4.3.0",
+    "mocha": "^10.0.0"
   }
 }
