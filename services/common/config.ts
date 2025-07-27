@@ -70,3 +70,29 @@ export const TEST_AMOUNT = ethers.parseEther('0.001') // 0.001 ETH
 export const TEST_START_PRICE = ethers.parseEther('0.002') // 0.002 ETH per unit
 export const TEST_END_PRICE = ethers.parseEther('0.0005') // 0.0005 ETH per unit
 export const TEST_DURATION = 300 // 5 minutes
+
+export interface ChainConfig {
+    chainId: number
+    name: string
+    rpcUrl: string
+}
+
+export function getChainConfigs(): ChainConfig[] {
+    return [
+        {
+            chainId: CHAINS.base_sepolia.chainId,
+            name: 'Base Sepolia',
+            rpcUrl: CHAINS.base_sepolia.rpc
+        },
+        {
+            chainId: CHAINS.arbitrum_sepolia.chainId,
+            name: 'Arbitrum Sepolia',
+            rpcUrl: CHAINS.arbitrum_sepolia.rpc
+        },
+        {
+            chainId: CHAINS.ethereum_sepolia.chainId,
+            name: 'Ethereum Sepolia',
+            rpcUrl: CHAINS.ethereum_sepolia.rpc
+        }
+    ]
+}

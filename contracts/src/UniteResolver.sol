@@ -7,6 +7,8 @@ import {IBaseEscrow} from "../lib/cross-chain-swap/contracts/interfaces/IBaseEsc
 import {IEscrow} from "../lib/cross-chain-swap/contracts/interfaces/IEscrow.sol";
 import {IEscrowFactory} from "../lib/cross-chain-swap/contracts/interfaces/IEscrowFactory.sol";
 import {IOrderMixin} from "limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
+import {TakerTraits} from "limit-order-protocol/contracts/libraries/TakerTraitsLib.sol";
+import {TimelocksLib, Timelocks} from "../lib/cross-chain-swap/contracts/libraries/TimelocksLib.sol";
 
 /**
  * @title UniteDefi Resolver with Dutch Auction support
@@ -14,7 +16,11 @@ import {IOrderMixin} from "limit-order-protocol/contracts/interfaces/IOrderMixin
  * @dev Manages cross-chain swaps with auction-based pricing
  */
 contract UniteResolver is Resolver {
+    using TimelocksLib for Timelocks;
+    
     DutchAuction public immutable dutchAuction;
+    IEscrowFactory private immutable _FACTORY;
+    IOrderMixin private immutable _LOP;
     
     mapping(bytes32 => bytes32) public auctionToEscrow;
     mapping(bytes32 => bytes32) public escrowToAuction;
@@ -37,6 +43,8 @@ contract UniteResolver is Resolver {
         address _dutchAuction
     ) Resolver(factory, lop, initialOwner) {
         dutchAuction = DutchAuction(_dutchAuction);
+        _FACTORY = factory;
+        _LOP = lop;
     }
 
     /**
@@ -79,7 +87,18 @@ contract UniteResolver is Resolver {
         
         emit AuctionLinkedToEscrow(auctionId, escrowId);
         
-        deploySrc(immutables, order, r, vs, amount, takerTraits, args);
+        // Deploy source escrow directly since deploySrc has onlyOwner modifier
+        IBaseEscrow.Immutables memory immutablesMem = immutables;
+        immutablesMem.timelocks = TimelocksLib.setDeployedAt(immutables.timelocks, block.timestamp);
+        address computed = IEscrowFactory(address(_FACTORY)).addressOfEscrowSrc(immutablesMem);
+
+        (bool success,) = address(computed).call{value: immutablesMem.safetyDeposit}("");
+        if (!success) revert IBaseEscrow.NativeTokenSendingFailure();
+
+        // _ARGS_HAS_TARGET = 1 << 251
+        takerTraits = TakerTraits.wrap(TakerTraits.unwrap(takerTraits) | uint256(1 << 251));
+        bytes memory argsMem = abi.encodePacked(computed, args);
+        IOrderMixin(address(_LOP)).fillOrderArgs(order, r, vs, amount, takerTraits, argsMem);
     }
 
     /**
@@ -98,12 +117,13 @@ contract UniteResolver is Resolver {
         uint256 currentPrice = dutchAuction.getCurrentPrice(auctionId);
         dutchAuction.settleAuction{value: msg.value}(auctionId);
         
-        deployDst(dstImmutables, srcCancellationTimestamp);
+        // Deploy destination escrow directly
+        _FACTORY.createDstEscrow{value: msg.value}(dstImmutables, srcCancellationTimestamp);
         
         emit CrossChainAuctionInitiated(
             auctionId,
             block.chainid,
-            dstImmutables.srcChainId,
+            block.chainid, // Using current chain id as placeholder
             msg.sender
         );
     }

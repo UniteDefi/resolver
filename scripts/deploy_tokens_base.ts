@@ -33,7 +33,7 @@ async function deployTokensOnBase() {
     // Read compiled MockToken
     const mockTokenJson = JSON.parse(
       fs.readFileSync(
-        path.join(process.cwd(), "out/MockToken.sol/MockToken.json"),
+        path.join(process.cwd(), "dist/contracts/MockToken.sol/MockToken.json"),
         "utf8"
       )
     );
@@ -79,7 +79,7 @@ async function deployTokensOnBase() {
     console.log("\n[Deploy] Deploying TokenDutchAuction...");
     const auctionJson = JSON.parse(
       fs.readFileSync(
-        path.join(process.cwd(), "out/TokenDutchAuction.sol/TokenDutchAuction.json"),
+        path.join(process.cwd(), "dist/contracts/TokenDutchAuction.sol/TokenDutchAuction.json"),
         "utf8"
       )
     );

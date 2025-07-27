@@ -33,7 +33,7 @@ const CHAIN_CONFIGS: Record<string, ChainConfig> = {
   },
 };
 
-const FUNDING_AMOUNT = ethers.parseEther("0.001");
+const FUNDING_AMOUNT = ethers.parseEther("0.05");
 
 async function getWalletFromEnv(envKey: string): Promise<{ privateKey: string; address: string } | null> {
   const envPrivateKey = process.env[envKey];
