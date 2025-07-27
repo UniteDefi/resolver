@@ -1,7 +1,7 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
+use near_sdk::{env, near_bindgen, AccountId, Balance, Promise, NearToken, Gas};
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -79,8 +79,8 @@ impl TestToken {
                 amount.0,
                 msg
             ).into_bytes(),
-            0,
-            env::prepaid_gas() / 3,
+            NearToken::from_yoctonear(0),
+            Gas::from_tgas(10),
         )
     }
 
