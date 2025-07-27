@@ -6,7 +6,8 @@ module unite_defi::escrow_factory {
     use aptos_framework::account::{Self, SignerCapability};
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
-    use aptos_std::aptos_hash;
+    use aptos_std::hash;
+    use std::bcs;
     use unite_defi::events;
     use unite_defi::htlc_escrow;
     use unite_defi::dutch_auction;
@@ -53,7 +54,7 @@ module unite_defi::escrow_factory {
         let deployer_addr = signer::address_of(deployer);
         assert!(!exists<EscrowFactory>(deployer_addr), E_ALREADY_INITIALIZED);
         
-        let (resource_account, signer_cap) = account::create_resource_account(
+        let (_resource_account, signer_cap) = account::create_resource_account(
             deployer,
             b"escrow_factory_v1"
         );
@@ -71,7 +72,7 @@ module unite_defi::escrow_factory {
     public entry fun approve_tokens<CoinType>(
         user: &signer,
         amount: u64,
-    ) {
+    ) acquires TokenAllowance {
         let user_addr = signer::address_of(user);
         
         if (!exists<TokenAllowance<CoinType>>(user_addr)) {
@@ -102,18 +103,18 @@ module unite_defi::escrow_factory {
         cancellation_deadline: u64,
         public_cancellation_deadline: u64,
         is_source: bool,
-        safety_deposit: Coin<AptosCoin>,
+        safety_deposit_amount: u64,
     ) acquires EscrowFactory, TokenAllowance {
         let resolver_addr = signer::address_of(resolver);
         
         assert!(dutch_auction::is_auction_active(auction_id), E_AUCTION_NOT_ACTIVE);
         assert!(exists<EscrowFactory>(@unite_defi), E_NOT_INITIALIZED);
-        assert!(coin::value(&safety_deposit) >= SAFETY_DEPOSIT_AMOUNT, E_INSUFFICIENT_SAFETY_DEPOSIT);
+        assert!(safety_deposit_amount >= SAFETY_DEPOSIT_AMOUNT, E_INSUFFICIENT_SAFETY_DEPOSIT);
         
-        let factory = borrow_global_mut<EscrowFactory>(@unite_defi);
+        // Withdraw safety deposit from resolver
+        let safety_deposit = coin::withdraw<AptosCoin>(resolver, safety_deposit_amount);
         
-        assert!(!table::contains(&factory.resolver_locks, auction_id), E_RESOLVER_ALREADY_LOCKED);
-        
+        // Check locks and generate key first
         let escrow_key = generate_escrow_key(
             maker,
             taker,
@@ -122,14 +123,22 @@ module unite_defi::escrow_factory {
             is_source
         );
         
-        assert!(!table::contains(&factory.escrows, escrow_key), E_ESCROW_ALREADY_EXISTS);
+        // First borrow to check constraints
+        {
+            let factory = borrow_global<EscrowFactory>(@unite_defi);
+            assert!(!table::contains(&factory.resolver_locks, auction_id), E_RESOLVER_ALREADY_LOCKED);
+            assert!(!table::contains(&factory.escrows, escrow_key), E_ESCROW_ALREADY_EXISTS);
+        };
         
+        // Withdraw tokens - this may also borrow EscrowFactory
         let tokens = if (is_source) {
             withdraw_from_allowance<CoinType>(taker, token_amount)
         } else {
             coin::withdraw<CoinType>(resolver, token_amount)
         };
         
+        // Now get mutable borrow for modifications
+        let factory = borrow_global_mut<EscrowFactory>(@unite_defi);
         let resource_signer = account::create_signer_with_capability(&factory.signer_cap);
         let escrow_seed = vector::empty<u8>();
         vector::append(&mut escrow_seed, b"escrow_");
@@ -203,7 +212,7 @@ module unite_defi::escrow_factory {
     fun withdraw_from_allowance<CoinType>(
         owner: address,
         amount: u64,
-    ): Coin<CoinType> acquires TokenAllowance {
+    ): Coin<CoinType> acquires TokenAllowance, EscrowFactory {
         assert!(exists<TokenAllowance<CoinType>>(owner), E_INSUFFICIENT_ALLOWANCE);
         
         let allowance = borrow_global_mut<TokenAllowance<CoinType>>(owner);
@@ -231,7 +240,7 @@ module unite_defi::escrow_factory {
         vector::append(&mut key_data, *hashlock);
         vector::append(&mut key_data, bcs::to_bytes(&is_source));
         
-        aptos_hash::sha3_256(key_data)
+        hash::sha3_256(key_data)
     }
 
     #[view]
