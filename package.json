@@ -6,10 +6,8 @@
     "test": "forge build && node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "lint": "eslint  \"tests/**/*.ts\"",
     "build": "tsc",
-    "start:resolvers": "tsx services/orchestrator.ts",
-    "start:edge-cases": "tsx services/edge_case_tester.ts",
-    "start:single-chain": "TEST_CHAINS=ethereum_sepolia tsx services/orchestrator.ts",
-    "start:multi-chain": "TEST_CHAINS=ethereum_sepolia,base_sepolia,polygon_amoy,arbitrum_sepolia tsx services/orchestrator.ts",
+    "start:cross-chain-resolver": "tsx services/cross_chain_resolver_service.ts",
+    "test:cross-chain-flow": "tsx test_cross_chain_swap_flow.ts",
     "generate:wallets": "tsx scripts/generate_random_wallets.ts",
     "fund:wallets": "tsx scripts/fund_test_wallets.ts",
     "deploy:base": "tsx scripts/deploy_tokens_base.ts",
@@ -52,7 +50,7 @@
   "dependencies": {
     "axios": "^1.11.0",
     "dotenv": "^16.4.5",
-    "ethers": "^6.13.2",
+    "ethers": "^6.15.0",
     "prool": "0.0.24"
   }
 }
