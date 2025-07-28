@@ -135,3 +135,16 @@ cache
 .env.deployment
 .env.test
 generated_wallets.txt
+# Environment files
+.env
+.env.*
+!.env.example
+.env.tron
+
+
+# Address and wallet files (sensitive)
+tron_addresses.json
+tron_addresses_funded.json
+*_addresses.json
+*wallets.txt
+
