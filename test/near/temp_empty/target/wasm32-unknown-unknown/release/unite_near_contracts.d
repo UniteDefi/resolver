@@ -1,0 +1,1 @@
+/Users/gabrielantonyxaviour/Documents/projects/unite-defi/resolver-branches/near/test/near/temp_empty/target/wasm32-unknown-unknown/release/unite_near_contracts.wasm: /Users/gabrielantonyxaviour/Documents/projects/unite-defi/resolver-branches/near/test/near/temp_empty/src/lib.rs
