@@ -10,16 +10,17 @@
     "test:old": "mocha -r ts-node/register tests/cross-chain-htlc.test.ts --timeout 60000",
     "build": "tsc",
     "compile-contracts": "ts-node scripts/compile-contracts.ts",
-    "deploy-near": "ts-node scripts/deploy-near.ts", 
+    "deploy-near": "ts-node scripts/deploy-near.ts",
     "deploy-base": "ts-node scripts/deploy-base.ts",
     "deploy-all": "yarn deploy-near && yarn deploy-base",
     "test:infrastructure": "ts-node test-infrastructure.ts",
     "test:integration": "yarn test"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
     "@types/node": "^20.0.0",
     "dotenv": "^16.0.0",
-    "ethers": "^6.13.0",
+    "ethers": "^6.15.0",
     "near-api-js": "^4.0.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
