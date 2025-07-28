@@ -1,71 +1,109 @@
-# UniteDefi Cross-Chain Resolver
+# Cross-Chain Swap Resolver
 
-A comprehensive implementation of Dutch auction resolvers with cross-chain capabilities, built on top of 1inch Fusion+ infrastructure.
+This repository implements the resolver component of a centralized relayer-based cross-chain swap architecture. The system enables gasless cross-chain token swaps through a coordinated network of resolvers.
 
-## Project Structure
+## Architecture Overview
 
-```
-resolver/
-├── contracts/           # Solidity smart contracts
-│   ├── src/            # Contract implementations
-│   └── test/           # Foundry tests
-├── services/           # TypeScript resolver services
-│   ├── common/         # Shared utilities
-│   ├── resolvers/      # Resolver implementations
-│   └── seller/         # Auction creator service
-├── tests/              # Integration tests
-├── scripts/            # Deployment and utility scripts
-└── docs/               # Documentation
-```
+### Cross-Chain Swap Flow
 
-## Features
+The system orchestrates cross-chain swaps through a centralized relayer service that coordinates between users and resolvers:
 
-- **Dutch Auction Mechanism**: Linear price decrease from start to end price
-- **Multi-Chain Support**: Deployed on Ethereum, Base, Polygon, and Arbitrum testnets
-- **Competitive Resolvers**: Multiple resolver strategies competing for best prices
-- **Cross-Chain Integration**: HTLC-based atomic swaps for secure cross-chain transfers
-- **Comprehensive Testing**: Unit tests, integration tests, and edge case coverage
+1. **User Initiation**: User approves the relayer contract to spend their source tokens and submits a swap order
+2. **Order Broadcasting**: Relayer broadcasts the order with current market price to all registered resolvers  
+3. **Resolver Commitment**: First resolver to find the price acceptable commits to fulfill the order (5-minute timer starts)
+4. **Escrow Deployment**: Committed resolver deploys escrow contracts on both chains with safety deposits
+5. **Fund Movement**: Relayer transfers user's pre-approved funds to source escrow
+6. **Settlement**: Resolver deposits destination tokens to destination escrow
+7. **Secret Revelation**: Relayer reveals secret on destination chain, unlocking funds for user
+8. **Completion**: Resolver uses revealed secret to claim source funds and safety deposit
+
+### Key Benefits
+
+- **Minimal Capital Requirements**: Resolvers only need safety deposits, not full trade amounts
+- **No Gas Wars**: Single resolver commitment prevents competition-driven gas price escalation  
+- **Guaranteed Execution**: 5-minute timeout with rescue mechanism ensures order completion
+- **Penalty System**: Failed resolvers forfeit safety deposits to rescue resolvers
+
+## Components
+
+### 1. Cross-Chain Resolver (`CrossChainResolver`)
+
+Main resolver service that:
+- Monitors relayer API for active swap orders
+- Evaluates orders based on price and chain support
+- Commits to acceptable orders
+- Deploys escrow contracts with safety deposits
+- Executes cross-chain settlements
+- Handles rescue opportunities when other resolvers fail
+
+### 2. Relayer Contract (`RelayerContract.sol`)
+
+Smart contract that:
+- Manages user token approvals
+- Transfers user funds to escrow contracts
+- Tracks order states and fund movements
+- Provides authorization for relayer services
+
+### 3. Escrow System
+
+Uses the 1inch cross-chain-swap escrow contracts:
+- `EscrowSrc`: Locks user funds on source chain
+- `EscrowDst`: Holds resolver funds on destination chain  
+- `EscrowFactory`: Deploys escrow contracts deterministically
+- HTLC (Hash Time Locked Contract) mechanism for atomic swaps
 
 ## Quick Start
 
 ### Prerequisites
 
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+- Node.js 18+
+- Private key with funds on supported chains
+- Access to blockchain RPC endpoints
 
-2. Install [Foundry](https://book.getfoundry.sh/getting-started/installation):
-   ```bash
-   curl -L https://foundry.paradigm.xyz | bash
-   ```
+### Installation
 
-3. Install contract dependencies:
-   ```bash
-   forge install
-   ```
+```bash
+# Install dependencies
+yarn install
 
-### Running Resolver Services
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your configuration
+```
 
-1. Copy environment template:
-   ```bash
-   cp .env.example .env
-   ```
+### Configuration
 
-2. Run resolver competition (single chain):
-   ```bash
-   pnpm start:single-chain
-   ```
+Set the following environment variables:
 
-3. Run multi-chain competition:
-   ```bash
-   pnpm start:multi-chain
-   ```
+```bash
+# Resolver identity
+RESOLVER_ID=resolver-1
+RESOLVER_PRIVATE_KEY=your_private_key_here
 
-4. Run edge case tests:
-   ```bash
-   pnpm start:edge-cases
-   ```
+# Relayer service endpoint
+RELAYER_API_URL=http://localhost:3000
+
+# Strategy parameters
+MAX_ACCEPTABLE_PRICE=0.005  # Maximum price willing to accept
+MIN_SAFETY_DEPOSIT=0.01     # Safety deposit amount in native tokens
+POLL_INTERVAL_MS=10000      # Order polling interval
+
+# RPC endpoints for supported chains
+ETHEREUM_RPC_URL=https://eth.llamarpc.com
+BASE_RPC_URL=https://base.llamarpc.com
+# ... other chains
+
+# Escrow factory addresses (deploy first)
+ETHEREUM_ESCROW_FACTORY=0x...
+BASE_ESCROW_FACTORY=0x...
+```
+
+### Running
+
+```bash
+# Start the cross-chain resolver
+yarn start:cross-chain-resolver
+```
 
 ### Running Tests
 
