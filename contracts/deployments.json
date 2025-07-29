@@ -1,0 +1,206 @@
+{
+  "sepolia": {
+    "chainId": 11155111,
+    "chainName": "Sepolia",
+    "deploymentDate": "2025-07-29T10:45:50.408Z",
+    "contracts": {
+      "wrappedNative": {
+        "name": "WETH",
+        "address": "0x0361d3C7C5C1f236f507453086Cde18d12Dd76e3"
+      },
+      "usdt": {
+        "name": "Mock USDT",
+        "address": "0x81Cc67Ed241C9Ed3142a45Eff844957de2b37877"
+      },
+      "dai": {
+        "name": "Mock DAI",
+        "address": "0x3096ca722E2343664f5CeAD66e1a8BdF763dD8C2"
+      },
+      "limitOrderProtocol": {
+        "address": "0x03Aec373db1bd6722c0927d3B392D99bC379887D"
+      },
+      "uniteEscrowFactory": {
+        "address": "0x4BdC51aDBeb6dC3462042FD4EcC1304677B5e00B"
+      }
+    },
+    "deployer": "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
+    "broadcastData": {
+      "contracts": {
+        "WrappedTokenMock": {
+          "address": "0x0361d3c7c5c1f236f507453086cde18d12dd76e3",
+          "transactionHash": "0x9f73fc7ea06e8d77f46ffbf0af85f091fe6bb73156655b4c845f01ecb1558a01",
+          "deployer": "0x5121aa62b1f0066c1e9d27b3b5b4e64e0c928a35",
+          "gasUsed": null
+        },
+        "MockERC20": {
+          "address": "0x3096ca722e2343664f5cead66e1a8bdf763dd8c2",
+          "transactionHash": "0xdb3154e73b768c5f149b7933f364446e47df101abb0f00082edf5674c1ca3e9a",
+          "deployer": "0x5121aa62b1f0066c1e9d27b3b5b4e64e0c928a35",
+          "gasUsed": null
+        },
+        "LimitOrderProtocol": {
+          "address": "0x03aec373db1bd6722c0927d3b392d99bc379887d",
+          "transactionHash": "0xb3cf9275ba1233125416e81d1ea8d167c85ccb8ce78b9e8ce912d23ea047b1a0",
+          "deployer": "0x5121aa62b1f0066c1e9d27b3b5b4e64e0c928a35",
+          "gasUsed": null
+        },
+        "UniteEscrowFactory": {
+          "address": "0x4bdc51adbeb6dc3462042fd4ecc1304677b5e00b",
+          "transactionHash": "0x0e01dc9b5c32ce72e92884334916a1afb1a04345a301f673fe00ebdefb475d4a",
+          "deployer": "0x5121aa62b1f0066c1e9d27b3b5b4e64e0c928a35",
+          "gasUsed": null
+        }
+      },
+      "transactions": [
+        {
+          "contractName": "WrappedTokenMock",
+          "address": "0x0361d3c7c5c1f236f507453086cde18d12dd76e3",
+          "hash": "0x9f73fc7ea06e8d77f46ffbf0af85f091fe6bb73156655b4c845f01ecb1558a01"
+        },
+        {
+          "contractName": "MockERC20",
+          "address": "0x81cc67ed241c9ed3142a45eff844957de2b37877",
+          "hash": "0x45a122a1ea399f5f80182f50c9d228191e64f3dfdb8f8861f2f258c5402a794c"
+        },
+        {
+          "contractName": "MockERC20",
+          "address": "0x3096ca722e2343664f5cead66e1a8bdf763dd8c2",
+          "hash": "0xdb3154e73b768c5f149b7933f364446e47df101abb0f00082edf5674c1ca3e9a"
+        },
+        {
+          "contractName": "LimitOrderProtocol",
+          "address": "0x03aec373db1bd6722c0927d3b392d99bc379887d",
+          "hash": "0xb3cf9275ba1233125416e81d1ea8d167c85ccb8ce78b9e8ce912d23ea047b1a0"
+        },
+        {
+          "contractName": "UniteEscrowFactory",
+          "address": "0x4bdc51adbeb6dc3462042fd4ecc1304677b5e00b",
+          "hash": "0x0e01dc9b5c32ce72e92884334916a1afb1a04345a301f673fe00ebdefb475d4a"
+        }
+      ],
+      "timestamp": 1753785913,
+      "commit": "e7a7e77"
+    }
+  },
+  "baseSepolia": {
+    "chainId": 84532,
+    "chainName": "Base Sepolia",
+    "deploymentDate": "2025-07-29",
+    "contracts": {
+      "wrappedNative": {
+        "name": "WETH",
+        "address": "0x5f207d42f869fd1c71d7f0f81a2a67fc20ff7323"
+      },
+      "usdt": {
+        "name": "Mock USDT",
+        "address": "0x576e379fa7b899b4de1e251e935b31543df3e954"
+      },
+      "dai": {
+        "name": "Mock DAI",
+        "address": "0x3e622317f8c93f7328350cf0b56d9ed4c620c5d6"
+      },
+      "limitOrderProtocol": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      },
+      "uniteEscrowFactory": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      }
+    },
+    "deployer": "0x7c54Efd7FdB4F718A1eD32758b0aB36e9C65B2d4",
+    "rpcUrl": "https://sepolia.base.org"
+  },
+  "arbitrumSepolia": {
+    "chainId": 421614,
+    "chainName": "Arbitrum Sepolia",
+    "deploymentDate": "2025-07-29",
+    "contracts": {
+      "wrappedNative": {
+        "name": "WETH",
+        "address": "0x5f207d42f869fd1c71d7f0f81a2a67fc20ff7323"
+      },
+      "usdt": {
+        "name": "Mock USDT",
+        "address": "0x576e379fa7b899b4de1e251e935b31543df3e954"
+      },
+      "dai": {
+        "name": "Mock DAI",
+        "address": "0x3e622317f8c93f7328350cf0b56d9ed4c620c5d6"
+      },
+      "limitOrderProtocol": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      },
+      "uniteEscrowFactory": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      }
+    },
+    "deployer": "0x7c54Efd7FdB4F718A1eD32758b0aB36e9C65B2d4",
+    "rpcUrl": "https://arb-sepolia.g.alchemy.com/v2/9MExjLYju7RbwL5KDizzG"
+  },
+  "etherlinkTestnet": {
+    "chainId": 128123,
+    "chainName": "Etherlink Testnet",
+    "deploymentDate": "2025-07-29",
+    "contracts": {
+      "wrappedNative": {
+        "name": "WXTZ",
+        "address": "0x5f207d42f869fd1c71d7f0f81a2a67fc20ff7323"
+      },
+      "usdt": {
+        "name": "Mock USDT",
+        "address": "0x576e379fa7b899b4de1e251e935b31543df3e954"
+      },
+      "dai": {
+        "name": "Mock DAI",
+        "address": "0x3e622317f8c93f7328350cf0b56d9ed4c620c5d6"
+      },
+      "limitOrderProtocol": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      },
+      "uniteEscrowFactory": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      }
+    },
+    "deployer": "0x7c54Efd7FdB4F718A1eD32758b0aB36e9C65B2d4",
+    "rpcUrl": "https://rpc.ankr.com/etherlink_testnet"
+  },
+  "monadTestnet": {
+    "chainId": 10143,
+    "chainName": "Monad Testnet",
+    "deploymentDate": "2025-07-29",
+    "contracts": {
+      "wrappedNative": {
+        "name": "WMON",
+        "address": "0x5f207d42f869fd1c71d7f0f81a2a67fc20ff7323"
+      },
+      "usdt": {
+        "name": "Mock USDT",
+        "address": "0x576e379fa7b899b4de1e251e935b31543df3e954"
+      },
+      "dai": {
+        "name": "Mock DAI",
+        "address": "0x3e622317f8c93f7328350cf0b56d9ed4c620c5d6"
+      },
+      "limitOrderProtocol": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      },
+      "uniteEscrowFactory": {
+        "address": "0xd165a53d4b4aa3088df8c0e17b4b6847e4b937f6"
+      }
+    },
+    "deployer": "0x7c54Efd7FdB4F718A1eD32758b0aB36e9C65B2d4",
+    "rpcUrl": "https://testnet-rpc.monad.xyz"
+  },
+  "notes": {
+    "deploymentTool": "Foundry/Forge",
+    "contractVersions": {
+      "LimitOrderProtocol": "1inch v5",
+      "UniteEscrowFactory": "Modified from 1inch cross-chain-swap with relayer authorization",
+      "MockTokens": "ERC20 with 1M initial supply"
+    },
+    "architecture": {
+      "userFlow": "Users approve funds to UniteEscrowFactory (not individual resolvers)",
+      "relayerRole": "Only authorized relayers can trigger fund transfers from users to escrows",
+      "escrowPattern": "Deterministic deployment using CREATE2"
+    }
+  }
+}
