@@ -1,0 +1,46 @@
+{
+  "10143 (Matchain Sepolia)": {
+    "MockWrappedNative": "0x3ca6e8712e4aeaaee1c0c74e21cc5299ac40475d",
+    "MockERC20": "0x0361d3c7c5c1f236f507453086cde18d12dd76e3",
+    "MockERC20_2": "0x81cc67ed241c9ed3142a45eff844957de2b37877",
+    "LimitOrderProtocol": "0x3096ca722e2343664f5cead66e1a8bdf763dd8c2",
+    "UniteEscrowFactory": "0x03aec373db1bd6722c0927d3b392d99bc379887d",
+    "Resolver": "0x4bdc51adbeb6dc3462042fd4ecc1304677b5e00b",
+    "Resolver_2": "0xc8b87cf93498d0002a21550e4b5e69016f141e7d",
+    "Resolver_3": "0x1a9c0781c937900430576ea6a76e115d963f4b5c",
+    "Resolver_4": "0x118501c55952e9826b3ae41bdc649626592e5268"
+  },
+  "84532 (Base Sepolia)": {
+    "MockWrappedNative": "0x3e472e067de525dba8b911d0d45d61114da8a386",
+    "MockERC20": "0x9ea54c1d35d9becc2aa693af0523eb5a8374e91f",
+    "MockERC20_2": "0x8265a0e46c6d67a932a7193f44099978518cf2b3",
+    "LimitOrderProtocol": "0x701bac4d462fb77f6b50ae82d59a9034992aafc9",
+    "UniteEscrowFactory": "0x6a0cf7e7424bf22a780726bac57fd5a442b025a6",
+    "Resolver": "0x8465d8d2c0a3228ddbfa8b0c495cd14d2dbee8ac",
+    "Resolver_2": "0x0da822fd04de975b2918ed62b11e9b85460b92ca",
+    "Resolver_3": "0x8cc6b52c569c3c0568232e40255d1e95de416067",
+    "Resolver_4": "0xc5268765e591e303e97fb0aec139cbb764b96df2"
+  },
+  "421614 (Arbitrum Sepolia)": {
+    "MockWrappedNative": "0xaa5b74289f5e24ada710a080999f9ccb267333eb",
+    "MockERC20": "0x2024b9fe781106c3966130e0fa26a15fba52a91c",
+    "MockERC20_2": "0x33541a384cc5cedbee28e6600d47ca9287cc1142",
+    "LimitOrderProtocol": "0x56cba594cd5cdd28bdb6eb151288c8c43ef19b9e",
+    "UniteEscrowFactory": "0xd2925c847c9f0ba806b63f30daa81e3a5c3b9278",
+    "Resolver": "0xba9a38f0af0475518e700f2153dce6c3d140d7e2",
+    "Resolver_2": "0xd65eb2d57ffcc321ee5d5ac7e97c7c162a6159de",
+    "Resolver_3": "0x6a4499e82eed912e27524e9fcc3a04c6821b885e",
+    "Resolver_4": "0x93a3710092cbff8259e16f4e25f7943a54613d78"
+  },
+  "11155111 (Sepolia)": {
+    "MockWrappedNative": "0x63f7888a08526b725b7274b9318034d87c8283b7",
+    "MockERC20": "0x10568cf1240cb275eb406bf5c6a38a416c557306",
+    "MockERC20_2": "0xef64d60e5b815660b88986ba67a75d82e304c186",
+    "LimitOrderProtocol": "0x1d0cbcc8d47d7629c8e4a1de9ade36e685212ba5",
+    "UniteEscrowFactory": "0x831ea96b6200948e199e36e64a870a409bf4787a",
+    "Resolver": "0x3e472e067de525dba8b911d0d45d61114da8a386",
+    "Resolver_2": "0x9ea54c1d35d9becc2aa693af0523eb5a8374e91f",
+    "Resolver_3": "0x8265a0e46c6d67a932a7193f44099978518cf2b3",
+    "Resolver_4": "0x701bac4d462fb77f6b50ae82d59a9034992aafc9"
+  }
+}
