@@ -265,60 +265,54 @@ export class CrossChainResolver {
       const srcChainConfig = this.config.chains[order.srcChainId];
       const dstChainConfig = this.config.chains[order.dstChainId];
       
-      // Load escrow factory contracts using proper 1inch interface
-      const ESCROW_FACTORY_ABI = [
-        "function createDstEscrow(tuple(bytes32 hashlockInfo, address maker, address taker, address token, uint256 amount, uint256 safetyDeposit, uint256 chainId, tuple(uint256 deploying, uint256 privateWithdrawal, uint256 publicWithdrawal, uint256 privateCancellation, uint256 publicCancellation) timelocks) dstImmutables, uint256 srcCancellationTimestamp) external payable",
-        "function addressOfEscrowSrc(tuple(...) immutables) external view returns (address)",
-        "function addressOfEscrowDst(tuple(...) immutables) external view returns (address)",
-        "event SrcEscrowCreated(tuple(...) srcImmutables, tuple(...) dstImmutablesComplement)",
-        "event DstEscrowCreated(address escrow, bytes32 hashlock, address taker)"
+      // Load TestEscrowFactory contracts with correct ABI
+      const TEST_ESCROW_FACTORY_ABI = [
+        "function createDstEscrow(bytes calldata data, uint256) external payable returns (address)",
+        "function addressOfEscrowSrc(bytes calldata data) external view returns (address)",
+        "function addressOfEscrowDst(bytes calldata data) external view returns (address)",
+        "event EscrowCreated(address escrow, bool isSource)"
       ];
       
-      const srcEscrowFactory = new ethers.Contract(srcChainConfig.escrowFactory, ESCROW_FACTORY_ABI, srcSigner);
-      const dstEscrowFactory = new ethers.Contract(dstChainConfig.escrowFactory, ESCROW_FACTORY_ABI, dstSigner);
+      const dstEscrowFactory = new ethers.Contract(dstChainConfig.escrowFactory, TEST_ESCROW_FACTORY_ABI, dstSigner);
       
       // Calculate safety deposit amount
-      const safetyDepositWei = ethers.parseUnits(this.config.minSafetyDeposit, srcChainConfig.nativeTokenDecimals);
+      const safetyDepositWei = ethers.parseEther(this.config.minSafetyDeposit); // Convert ETH to wei
       
-      // Create proper escrow immutables following 1inch pattern
-      const currentTimestamp = Math.floor(Date.now() / 1000);
-      const escrowImmutables = {
-        hashlockInfo: order.secretHash,
-        maker: order.userAddress,
-        taker: this.wallet.address,
-        token: order.srcToken,
-        amount: order.srcAmount,
-        safetyDeposit: safetyDepositWei.toString(),
-        chainId: order.srcChainId,
-        timelocks: {
-          deploying: currentTimestamp,
-          privateWithdrawal: currentTimestamp + 600, // 10 minutes
-          publicWithdrawal: currentTimestamp + 1200, // 20 minutes
-          privateCancellation: currentTimestamp + 1800, // 30 minutes
-          publicCancellation: currentTimestamp + 2400 // 40 minutes
-        }
-      };
+      // Calculate destination amount from source amount and market price
+      const srcAmountBig = BigInt(order.srcAmount);
+      const marketPriceBig = ethers.parseEther(order.marketPrice);
+      const dstAmount = (srcAmountBig * marketPriceBig) / ethers.parseEther("1");
       
-      this.logger.log(`Step 5a: Deploying destination escrow with safety deposit: ${this.config.minSafetyDeposit}`);
+      this.logger.log(`Calculated dstAmount: ${dstAmount.toString()} (from ${order.srcAmount} * ${order.marketPrice})`);
       
-      // Deploy destination escrow first (as per 1inch pattern)
+      // Encode data for TestEscrowFactory: (bytes32 secretHash, address user, address resolver, address token, uint256 amount)
+      const escrowData = ethers.AbiCoder.defaultAbiCoder().encode(
+        ["bytes32", "address", "address", "address", "uint256"],
+        [order.secretHash, order.userAddress, this.wallet.address, order.dstToken, dstAmount.toString()]
+      );
+      
+      this.logger.log(`Step 5a: Deploying destination escrow with safety deposit: ${this.config.minSafetyDeposit} ETH`);
+      
+      // Deploy destination escrow first
       const dstTx = await dstEscrowFactory.createDstEscrow(
-        escrowImmutables,
-        escrowImmutables.timelocks.privateCancellation,
+        escrowData,
+        0, // unused parameter in TestEscrowFactory
         { value: safetyDepositWei }
       );
       const dstReceipt = await dstTx.wait();
       
       this.logger.log(`Step 5b: Destination escrow deployed in tx: ${dstTx.hash}`);
       
-      // Get escrow addresses using proper calculation
-      const srcEscrowAddress = await srcEscrowFactory.addressOfEscrowSrc(escrowImmutables);
-      const dstEscrowAddress = await dstEscrowFactory.addressOfEscrowDst(escrowImmutables);
+      // Get the destination escrow address from the contract call result
+      const dstEscrowAddress = await dstEscrowFactory.addressOfEscrowDst(escrowData);
       
-      this.logger.log(`Step 5 Complete: Escrows deployed - Src: ${srcEscrowAddress}, Dst: ${dstEscrowAddress}`);
+      this.logger.log(`Step 5 Complete: Destination escrow deployed at: ${dstEscrowAddress}`);
+      
+      // For our simplified flow, we only deploy destination escrow
+      // Source escrow is handled by the relayer moving funds to destination escrow
       
       // Step 6: Notify relayer that escrows are ready
-      await this.notifyEscrowsReady(order, srcEscrowAddress, dstEscrowAddress, "pending_src_deployment", dstTx.hash);
+      await this.notifyEscrowsReady(order, dstEscrowAddress, dstEscrowAddress, dstTx.hash, dstTx.hash);
       
     } catch (error) {
       this.logger.error(`Error in Step 5 (deploying escrows) for order ${order.orderId}:`, error);
@@ -392,8 +386,133 @@ export class CrossChainResolver {
       await axios.post(`${this.config.relayerApiUrl}/api/notify-completion`, settlementNotification);
       this.logger.success(`Step 8 Complete: Trade execution notified to relayer for order ${order.orderId}`);
       
+      // Start monitoring for secret reveal
+      this.monitorSecretReveal(order);
+      
     } catch (error) {
       this.logger.error(`Error in Step 8 (settlement) for order ${order.orderId}:`, error);
+    }
+  }
+  
+  private async monitorSecretReveal(order: CrossChainOrderData): Promise<void> {
+    this.logger.log(`Step 9-10: Monitoring for secret reveal on order ${order.orderId}`);
+    
+    const maxAttempts = 60; // Monitor for up to 5 minutes
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const response = await axios.get(
+          `${this.config.relayerApiUrl}/api/order-secret/${order.orderId}?resolverAddress=${this.wallet.address}`
+        );
+        
+        if (response.data.status === "revealed") {
+          this.logger.success(`Secret revealed for order ${order.orderId}!`);
+          this.logger.log(`Reveal TX: ${response.data.revealTxHash}`);
+          
+          // Retrieve the secret from blockchain logs
+          await this.withdrawFromSourceEscrow(
+            order,
+            response.data.srcEscrowAddress,
+            response.data.revealTxHash
+          );
+          
+          break;
+        }
+      } catch (error: any) {
+        if (error.response?.status !== 400) {
+          this.logger.error(`Error monitoring secret for order ${order.orderId}:`, error);
+        }
+      }
+      
+      await this.sleep(5000); // Check every 5 seconds
+      attempts++;
+    }
+    
+    if (attempts >= maxAttempts) {
+      this.logger.error(`Timeout waiting for secret reveal on order ${order.orderId}`);
+    }
+  }
+  
+  private async withdrawFromSourceEscrow(
+    order: CrossChainOrderData,
+    srcEscrowAddress: string,
+    revealTxHash: string
+  ): Promise<void> {
+    try {
+      this.logger.log(`Step 10: Withdrawing from source escrow for order ${order.orderId}`);
+      
+      const dstProvider = this.providers.get(order.dstChainId);
+      const srcProvider = this.providers.get(order.srcChainId);
+      
+      if (!dstProvider || !srcProvider) {
+        throw new Error("Providers not available");
+      }
+      
+      // First, retrieve the revealed secret from destination chain logs
+      const receipt = await dstProvider.getTransactionReceipt(revealTxHash);
+      if (!receipt) {
+        throw new Error("Reveal transaction receipt not found");
+      }
+      
+      // Look for the secret in the event logs
+      const escrowInterface = new ethers.Interface([
+        "event EscrowWithdrawal(bytes32 secret)"
+      ]);
+      
+      let revealedSecret: string | null = null;
+      
+      for (const log of receipt.logs) {
+        try {
+          const parsed = escrowInterface.parseLog({
+            topics: log.topics as string[],
+            data: log.data
+          });
+          
+          if (parsed && parsed.name === "EscrowWithdrawal") {
+            const secretBytes32 = parsed.args[0];
+            revealedSecret = ethers.decodeBytes32String(secretBytes32);
+            this.logger.log(`Found revealed secret: ${revealedSecret}`);
+            break;
+          }
+        } catch (e) {
+          // Not the event we're looking for
+        }
+      }
+      
+      if (!revealedSecret) {
+        throw new Error("Could not find revealed secret in transaction logs");
+      }
+      
+      // Now withdraw from source escrow using the revealed secret
+      const srcSigner = this.wallet.connect(srcProvider);
+      
+      const SIMPLE_ESCROW_ABI = [
+        "function claimWithSecret(bytes32 secret) external",
+        "function claimed() view returns (bool)"
+      ];
+      
+      const srcEscrowContract = new ethers.Contract(srcEscrowAddress, SIMPLE_ESCROW_ABI, srcSigner);
+      
+      // Check if already claimed
+      const isClaimed = await srcEscrowContract.claimed();
+      if (isClaimed) {
+        this.logger.warn(`Source escrow already claimed for order ${order.orderId}`);
+        return;
+      }
+      
+      // Convert secret back to bytes32
+      const secretBytes32 = ethers.encodeBytes32String(revealedSecret);
+      
+      this.logger.log(`Withdrawing from source escrow with secret...`);
+      const tx = await srcEscrowContract.claimWithSecret(secretBytes32);
+      const srcReceipt = await tx.wait();
+      
+      this.logger.success(`Step 10 Complete: Withdrew from source escrow in tx: ${tx.hash}`);
+      this.logger.success(`🎉 CROSS-CHAIN SWAP COMPLETED for order ${order.orderId}`);
+      
+    } catch (error) {
+      this.logger.error(`Error in Step 10 (source withdrawal) for order ${order.orderId}:`, error);
     }
   }
 
