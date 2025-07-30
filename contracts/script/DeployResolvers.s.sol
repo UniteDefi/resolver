@@ -14,11 +14,17 @@ contract DeployResolvers is Script {
         
         console.log("Deploying 4 Resolver contracts...");
         
-        address deployer = vm.addr(deployerPrivateKey);
+        // Read resolver wallet addresses from environment
+        address[4] memory resolverWallets = [
+            vm.envAddress("RESOLVER_WALLET_0"),
+            vm.envAddress("RESOLVER_WALLET_1"),
+            vm.envAddress("RESOLVER_WALLET_2"),
+            vm.envAddress("RESOLVER_WALLET_3")
+        ];
         
         for (uint i = 0; i < 4; i++) {
-            // Each resolver gets its own owner address for demo purposes
-            address resolverOwner = address(uint160(uint256(keccak256(abi.encodePacked("resolver", i)))));
+            // Use the resolver wallet address as the owner
+            address resolverOwner = resolverWallets[i];
             
             Resolver resolver = new Resolver(
                 IEscrowFactory(factory),
