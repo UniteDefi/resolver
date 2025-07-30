@@ -3,7 +3,7 @@
 # Mint tokens to resolver wallets on all chains
 
 # Load environment variables
-source ../.env
+source .env
 
 # Colors for output
 GREEN='\033[0;32m'
