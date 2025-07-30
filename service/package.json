@@ -14,7 +14,7 @@
     "start:base-test": "tsx services/base_sepolia_test.ts",
     "check:balances": "tsx scripts/check_balances.ts",
     "start:sqs-resolver": "tsx services/sqs_resolver_example.ts",
-    "start:enhanced-resolver": "tsx services/enhanced_sqs_resolver.ts"
+    "start:enhanced-resolver": "tsx enhanced_sqs_resolver.ts"
   },
   "devDependencies": {
     "@eslint/compat": "1.1.0",
