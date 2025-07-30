@@ -141,3 +141,4 @@ integrated_resolver.log
 gasless_resolvers.log
 *.log
 
+broadcast/
