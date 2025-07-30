@@ -1,88 +1,141 @@
 const fs = require('fs');
 const path = require('path');
 
-// Parse Sepolia deployment
-function extractDeploymentInfo(broadcastFile) {
-    try {
-        const data = JSON.parse(fs.readFileSync(broadcastFile, 'utf8'));
-        const contracts = {};
-        const transactions = [];
-        
-        // Extract contract deployments
-        for (const tx of data.transactions) {
-            if (tx.contractName && tx.contractAddress) {
-                contracts[tx.contractName] = {
-                    address: tx.contractAddress,
-                    transactionHash: tx.hash,
-                    deployer: tx.transaction.from,
-                    gasUsed: tx.receipt ? tx.receipt.gasUsed : null
-                };
-                transactions.push({
-                    contractName: tx.contractName,
-                    address: tx.contractAddress,
-                    hash: tx.hash
-                });
-            }
-        }
-        
-        return {
-            contracts,
-            transactions,
-            timestamp: data.timestamp,
-            commit: data.commit
-        };
-    } catch (error) {
-        console.error(`Error parsing ${broadcastFile}:`, error.message);
-        return null;
-    }
-}
-
-// Extract Sepolia deployment
-const sepoliaBroadcast = 'broadcast/DeployAll.s.sol/11155111/run-latest.json';
-const sepoliaDeployment = extractDeploymentInfo(sepoliaBroadcast);
-
-// Create deployment summary
-const deploymentSummary = {
-    sepolia: {
-        chainId: 11155111,
-        chainName: "Sepolia",
-        deploymentDate: new Date().toISOString(),
-        contracts: {
-            wrappedNative: {
-                name: "WETH",
-                address: "0x0361d3C7C5C1f236f507453086Cde18d12Dd76e3"
-            },
-            usdt: {
-                name: "Mock USDT",
-                address: "0x81Cc67Ed241C9Ed3142a45Eff844957de2b37877"
-            },
-            dai: {
-                name: "Mock DAI", 
-                address: "0x3096ca722E2343664f5CeAD66e1a8BdF763dD8C2"
-            },
-            limitOrderProtocol: {
-                address: "0x03Aec373db1bd6722c0927d3B392D99bC379887D"
-            },
-            uniteEscrowFactory: {
-                address: "0x4BdC51aDBeb6dC3462042FD4EcC1304677B5e00B"
-            },
-            relayerContract: {
-                address: "0xc8b87cF93498D0002A21550e4B5e69016F141e7D"
-            }
-        },
-        deployer: "0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35",
-        broadcastData: sepoliaDeployment
-    }
+// Chain configurations with correct key names
+const chainConfigs = {
+  11155111: { key: "eth_sepolia", name: "Ethereum Sepolia" },
+  84532: { key: "base_sepolia", name: "Base Sepolia" },
+  421614: { key: "arb_sepolia", name: "Arbitrum Sepolia" },
+  10143: { key: "monad_testnet", name: "Monad Testnet" }
 };
 
-// Save to JSON file
-const outputPath = path.join(__dirname, 'deployments.json');
-fs.writeFileSync(outputPath, JSON.stringify(deploymentSummary, null, 2));
+// Parse deployment file
+function extractDeploymentInfo(broadcastFile) {
+  try {
+    const data = JSON.parse(fs.readFileSync(broadcastFile, 'utf8'));
+    const contracts = {};
+    
+    // Extract contract deployments
+    for (const tx of data.transactions) {
+      if (tx.contractName && tx.contractAddress) {
+        // Handle multiple deployments of the same contract type
+        if (contracts[tx.contractName]) {
+          // If we already have this contract, create numbered versions
+          let counter = 2;
+          let newName = `${tx.contractName}_${counter}`;
+          while (contracts[newName]) {
+            counter++;
+            newName = `${tx.contractName}_${counter}`;
+          }
+          contracts[newName] = tx.contractAddress;
+        } else {
+          contracts[tx.contractName] = tx.contractAddress;
+        }
+      }
+    }
+    
+    return contracts;
+  } catch (error) {
+    console.error(`Error parsing ${broadcastFile}:`, error.message);
+    return null;
+  }
+}
 
-console.log(`Deployment summary saved to ${outputPath}`);
-console.log('\nSepolia Deployment Summary:');
-console.log('Deployer:', deploymentSummary.sepolia.deployer);
-console.log('Contracts:');
-Object.entries(deploymentSummary.sepolia.contracts).forEach(([key, contract]) => {
-    console.log(`  ${key}: ${contract.address}`);
-});
+// Initialize deployments structure
+const deployments = {
+  evm: {},
+  aptos: {
+    testnet: {
+      network: "aptos-testnet",
+      escrowFactory: "0x1234567890abcdef",
+      relayerContract: "0xabcdef1234567890"
+    }
+  },
+  sui: {
+    testnet: {
+      network: "sui-testnet",
+      escrowFactory: "0x1234567890abcdef",
+      relayerContract: "0xabcdef1234567890"
+    }
+  },
+  near: {
+    testnet: {
+      network: "near-testnet",
+      escrowFactory: "escrow-factory.testnet",
+      relayerContract: "relayer.testnet"
+    }
+  },
+  tron: {
+    testnet: {
+      network: "tron-shasta",
+      escrowFactory: "TXYZabcdef1234567890",
+      relayerContract: "TXYZabcdef0987654321"
+    }
+  }
+};
+
+// Process each chain's deployments
+for (const [chainId, config] of Object.entries(chainConfigs)) {
+  const broadcastFile = path.join(__dirname, `broadcast/DeployAll.s.sol/${chainId}/run-latest.json`);
+  
+  if (fs.existsSync(broadcastFile)) {
+    const contracts = extractDeploymentInfo(broadcastFile);
+    
+    if (contracts) {
+      // Add deployment data with flat structure
+      deployments.evm[config.key] = {
+        chainId: parseInt(chainId),
+        name: config.name,
+        ...contracts
+      };
+      
+      console.log(`✓ Extracted ${config.name} deployment`);
+    }
+  } else {
+    console.log(`✗ No deployment found for ${config.name}`);
+  }
+}
+
+// Read existing deployments file to preserve any manual entries
+const existingDeploymentsPath = path.join(__dirname, '../../deployments.json');
+if (fs.existsSync(existingDeploymentsPath)) {
+  try {
+    const existingDeployments = JSON.parse(fs.readFileSync(existingDeploymentsPath, 'utf8'));
+    
+    // Merge with existing EVM deployments, preferring new data
+    for (const [key, data] of Object.entries(existingDeployments.evm || {})) {
+      if (!deployments.evm[key]) {
+        deployments.evm[key] = data;
+      }
+    }
+    
+    // Preserve non-EVM chains if they have actual data
+    for (const chain of ['aptos', 'sui', 'near', 'tron']) {
+      if (existingDeployments[chain] && existingDeployments[chain].testnet) {
+        const testnetData = existingDeployments[chain].testnet;
+        // Only keep if it has real data (not placeholder addresses)
+        if (testnetData.escrowFactory && !testnetData.escrowFactory.includes('1234567890abcdef')) {
+          deployments[chain] = existingDeployments[chain];
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Could not read existing deployments file, starting fresh');
+  }
+}
+
+// Save to JSON file
+const outputPath = path.join(__dirname, '../../deployments.json');
+fs.writeFileSync(outputPath, JSON.stringify(deployments, null, 2));
+
+console.log(`\nDeployment summary saved to ${outputPath}`);
+console.log('\nDeployment Summary:');
+for (const [key, contracts] of Object.entries(deployments.evm)) {
+  console.log(`\n${contracts.name} (Chain ID: ${contracts.chainId}):`);
+  console.log(`  MockWrappedNative: ${contracts.MockWrappedNative || 'Not deployed'}`);
+  console.log(`  MockERC20 (USDT): ${contracts.MockERC20 || 'Not deployed'}`);
+  console.log(`  MockERC20_2 (DAI): ${contracts.MockERC20_2 || 'Not deployed'}`);
+  console.log(`  LimitOrderProtocol: ${contracts.LimitOrderProtocol || 'Not deployed'}`);
+  console.log(`  UniteEscrowFactory: ${contracts.UniteEscrowFactory || 'Not deployed'}`);
+  console.log(`  Resolvers: ${contracts.Resolver || 'Not deployed'}, ${contracts.Resolver_2 || 'Not deployed'}, ${contracts.Resolver_3 || 'Not deployed'}, ${contracts.Resolver_4 || 'Not deployed'}`);
+}
