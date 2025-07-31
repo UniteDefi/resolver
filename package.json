@@ -1,0 +1,17 @@
+{
+  "name": "unite-defi-resolver",
+  "version": "1.0.0",
+  "description": "Unite DeFi Resolver Services",
+  "scripts": {
+    "start": "./start-all.sh",
+    "start:pm2": "./start-pm2.sh",
+    "stop:pm2": "pm2 stop all",
+    "logs": "pm2 logs",
+    "status": "pm2 status",
+    "install:all": "cd service && npm install && cd ../relayer && npm install",
+    "dev": "./start-all.sh"
+  },
+  "devDependencies": {
+    "pm2": "^5.3.0"
+  }
+}
