@@ -23,8 +23,10 @@ resolver/
 │   ├── enhanced_sqs_resolver.ts  # Main resolver service
 │   ├── common/        # Shared utilities and configurations
 │   └── resolvers/     # Different resolver strategies
-├── testing/           # Test scripts and utilities
-│   └── constants/     # Chain-specific test constants
+├── scripts/           # Testing and utility scripts
+│   ├── test-swap.ts   # Execute cross-chain swaps
+│   ├── fund-user.ts   # Fund test wallets with tokens
+│   └── check-balances.ts  # Check token balances
 └── deployments.json   # Unified deployment addresses
 ```
 
@@ -47,7 +49,69 @@ cd resolver
 # Install service dependencies
 cd service
 yarn install
+
+# Install testing script dependencies
+cd ../scripts
+npm install
 ```
+
+## Testing Cross-Chain Swaps
+
+### 1. Start Services
+
+First, ensure the relayer and resolver services are running:
+
+```bash
+# Terminal 1: Start Relayer
+cd relayer/
+npm run dev
+
+# Terminal 2-5: Start Resolvers
+cd resolver/service/
+RESOLVER_INDEX=0 npm run start:enhanced-resolver
+RESOLVER_INDEX=1 npm run start:enhanced-resolver
+RESOLVER_INDEX=2 npm run start:enhanced-resolver
+RESOLVER_INDEX=3 npm run start:enhanced-resolver
+```
+
+### 2. Fund Test Wallet
+
+Use the funding script to mint test tokens:
+
+```bash
+cd resolver/scripts/
+npm run fund-user -- --chain eth_sepolia --usdt 1000 --dai 1000
+```
+
+### 3. Execute Cross-Chain Swap
+
+Run a test swap:
+
+```bash
+# Swap 100 USDT from Ethereum Sepolia to Base Sepolia
+npm run test-swap -- --from eth_sepolia --to base_sepolia --token USDT --amount 100
+```
+
+### 4. Check Balances
+
+Verify your balances across all chains:
+
+```bash
+npm run check-balances
+```
+
+## Supported Chains
+
+- `eth_sepolia` - Ethereum Sepolia
+- `base_sepolia` - Base Sepolia  
+- `arb_sepolia` - Arbitrum Sepolia
+- `monad_testnet` - Monad Testnet
+
+## Supported Tokens
+
+- `USDT` - Mock USDT (6 decimals)
+- `DAI` - Mock DAI (18 decimals)
+- `WETH` - Wrapped Native Token (18 decimals)
 
 ### Configuration
 
