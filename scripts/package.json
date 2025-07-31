@@ -1,0 +1,25 @@
+{
+  "name": "unite-defi-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for testing Unite DeFi cross-chain swaps",
+  "scripts": {
+    "test-swap": "ts-node test-swap.ts",
+    "check-balances": "ts-node check-balances.ts",
+    "fund-user": "ts-node fund-user.ts"
+  },
+  "dependencies": {
+    "@1inch/byte-utils": "^3.1.0",
+    "@1inch/cross-chain-sdk": "^0.1.15",
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.3",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.0"
+  }
+}
