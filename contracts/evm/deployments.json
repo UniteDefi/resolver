@@ -1,0 +1,92 @@
+{
+  "evm": {
+    "eth_sepolia": {
+      "chainId": 11155111,
+      "name": "Ethereum Sepolia",
+      "MockWrappedNative": "0x6a0cf7e7424bf22a780726bac57fd5a442b025a6",
+      "MockUSDT": "0x8465d8d2c0a3228ddbfa8b0c495cd14d2dbee8ac",
+      "MockDAI": "0x0da822fd04de975b2918ed62b11e9b85460b92ca",
+      "LimitOrderProtocol": "0x8cc6b52c569c3c0568232e40255d1e95de416067",
+      "UniteEscrowFactory": "0xc5268765e591e303e97fb0aec139cbb764b96df2",
+      "Resolver": "0x900D487CB2a1264cC82ff477e62a94673fD2B09A",
+      "Resolver_2": "0xcc14100211626d4d6fc8751fb62c16a7d5be502f",
+      "Resolver_3": "0x4888dc936f9b9e398fd3b63ab2a6906f5caec795",
+      "Resolver_4": "0x7dac24e18114010de3b17a59dd2000df646cc8a6"
+    },
+    "base_sepolia": {
+      "chainId": 84532,
+      "name": "Base Sepolia",
+      "MockWrappedNative": "0x7871F66B42959cA21a1E0f1184Ce17Cd5d4b4Cf8",
+      "MockUSDT": "0xcD0c8F55f7131F62B86728d13EeCb683091A7Ee1",
+      "MockDAI": "0xbe4eEaBd99f8efC30eDCda8D3ff1ac7435dBEF0a",
+      "LimitOrderProtocol": "0x432F056De2D597FA9205731671472Fc22ab9F392",
+      "UniteEscrowFactory": "0x9bb2805e78C46310b7F4f4d9a5c13775ac56db60",
+      "SimpleResolver": "0x9ada1c1baE8F01c83eA47c11E914ff19cBa14A92",
+      "SimpleResolver_2": "0x1E5244830Ee935c0d18d9De56d3B6939482F224F",
+      "SimpleResolver_3": "0x11599fF6dd452c980880E0526c911455745f34E3",
+      "SimpleResolver_4": "0xfea2212782F163B7334c0eAAC2446CC2E50f78D6",
+      "Resolver": "0xe1d7347ec05950fb917e0fd67570578c3a758a0b",
+      "Resolver_2": "0x1c16b0aa031a652fe5b8be63a043ccb1759d569f",
+      "Resolver_3": "0xfadb0ebf3bb2948ad2636a775a2a940de342b996",
+      "Resolver_4": "0xa07a2ec1b09495b570360c9e26c659f4024daf63"
+    },
+    "arb_sepolia": {
+      "chainId": 421614,
+      "name": "Arbitrum Sepolia",
+      "MockWrappedNative": "0x84e057794d97C8246AdcB34ccED315f20aD23436",
+      "MockUSDT": "0xf0183241c71469c924ae94E3fb0876beDc906CFF",
+      "MockDAI": "0x9357EfdEAe4b0Db84474f5763D68b24b5cF47Bcd",
+      "LimitOrderProtocol": "0x34E0DeFf0ddD9ceEdF148A1498404AAFC058Dd33",
+      "UniteEscrowFactory": "0xE16489e4B3EAA12E836C53C16f4dD1449Ba9CA3c",
+      "SimpleResolver": "0xD95211EbA05A2FD434EA7BB082C4f63Bde728Eff",
+      "SimpleResolver_2": "0x47b16439DBC1af01aEc3c81619d29f9B341674ea",
+      "SimpleResolver_3": "0x77Ee05e2DcDA36f4301bbe26E4687e0220F5e7c1",
+      "SimpleResolver_4": "0xF56173399170098EEd716980F02825215596F8d2",
+      "Resolver": "0xc5268765e591e303e97fb0aec139cbb764b96df2",
+      "Resolver_2": "0x8fb4a80bacabe982ec1382ec9f032a53df0d88dd",
+      "Resolver_3": "0xcc14100211626d4d6fc8751fb62c16a7d5be502f",
+      "Resolver_4": "0x4888dc936f9b9e398fd3b63ab2a6906f5caec795"
+    },
+    "monad_testnet": {
+      "chainId": 10143,
+      "name": "Monad Testnet",
+      "MockWrappedNative": "0xc6ae2bba9d56eaaa3b932341434a842afc797e1c",
+      "MockUSDT": "0x1efa70cebaee4a28e3338ed7d316a28ce6e1d4f9",
+      "MockDAI": "0x9fdb806b9a7fa4bf00483af2898ae16ef01f5960",
+      "LimitOrderProtocol": "0x24f3d8f14f3bbe654d453a72dd9db6fd019a196e",
+      "UniteEscrowFactory": "0x9883a9330d1b0dab45c9747d57ca8bd2c532549e",
+      "Resolver": "0x5e9517b4b790117e67d569472d8ccb83aa4426e4",
+      "Resolver_2": "0xf6bbcf06ceb067fbb9a97fb2d04004acb442bb92",
+      "Resolver_3": "0x63f7888a08526b725b7274b9318034d87c8283b7",
+      "Resolver_4": "0x10568cf1240cb275eb406bf5c6a38a416c557306"
+    }
+  },
+  "aptos": {
+    "testnet": {
+      "network": "aptos-testnet",
+      "escrowFactory": "0x1234567890abcdef",
+      "relayerContract": "0xabcdef1234567890"
+    }
+  },
+  "sui": {
+    "testnet": {
+      "network": "sui-testnet",
+      "escrowFactory": "0x1234567890abcdef",
+      "relayerContract": "0xabcdef1234567890"
+    }
+  },
+  "near": {
+    "testnet": {
+      "network": "near-testnet",
+      "escrowFactory": "escrow-factory.testnet",
+      "relayerContract": "relayer.testnet"
+    }
+  },
+  "tron": {
+    "testnet": {
+      "network": "tron-shasta",
+      "escrowFactory": "TXYZabcdef1234567890",
+      "relayerContract": "TXYZabcdef0987654321"
+    }
+  }
+}
