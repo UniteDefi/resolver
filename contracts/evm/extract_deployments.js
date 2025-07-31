@@ -133,8 +133,8 @@ console.log('\nDeployment Summary:');
 for (const [key, contracts] of Object.entries(deployments.evm)) {
   console.log(`\n${contracts.name} (Chain ID: ${contracts.chainId}):`);
   console.log(`  MockWrappedNative: ${contracts.MockWrappedNative || 'Not deployed'}`);
-  console.log(`  MockERC20 (USDT): ${contracts.MockERC20 || 'Not deployed'}`);
-  console.log(`  MockERC20_2 (DAI): ${contracts.MockERC20_2 || 'Not deployed'}`);
+  console.log(`  MockUSDT: ${contracts.MockUSDT || 'Not deployed'}`);
+  console.log(`  MockDAI: ${contracts.MockDAI || 'Not deployed'}`);
   console.log(`  LimitOrderProtocol: ${contracts.LimitOrderProtocol || 'Not deployed'}`);
   console.log(`  UniteEscrowFactory: ${contracts.UniteEscrowFactory || 'Not deployed'}`);
   console.log(`  Resolvers: ${contracts.Resolver || 'Not deployed'}, ${contracts.Resolver_2 || 'Not deployed'}, ${contracts.Resolver_3 || 'Not deployed'}, ${contracts.Resolver_4 || 'Not deployed'}`);
