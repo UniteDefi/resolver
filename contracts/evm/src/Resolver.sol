@@ -58,7 +58,7 @@ contract Resolver is Ownable {
         immutablesMem.timelocks = TimelocksLib.setDeployedAt(immutables.timelocks, block.timestamp);
         address computed = _FACTORY.addressOfEscrowSrc(immutablesMem);
 
-        (bool success,) = address(computed).call{value: immutablesMem.safetyDeposit}("");
+        (bool success,) = address(computed).call{value: msg.value}("");
         if (!success) revert IBaseEscrow.NativeTokenSendingFailure();
 
         // _ARGS_HAS_TARGET = 1 << 251
