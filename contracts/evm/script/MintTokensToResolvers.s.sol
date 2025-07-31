@@ -3,7 +3,8 @@ pragma solidity ^0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {MockERC20} from "../src/mocks/MockERC20.sol";
+import {MockUSDT} from "../src/mocks/MockUSDT.sol";
+import {MockDAI} from "../src/mocks/MockDAI.sol";
 import {MockWrappedNative} from "../src/mocks/MockWrappedNative.sol";
 import "forge-std/StdJson.sol";
 
@@ -34,10 +35,10 @@ contract MintTokensToResolvers is Script {
 
         // Get token addresses for current chain
         address usdtAddress = json.readAddress(
-            string.concat(".evm.", chainKey, ".MockERC20")
+            string.concat(".evm.", chainKey, ".MockUSDT")
         );
         address daiAddress = json.readAddress(
-            string.concat(".evm.", chainKey, ".MockERC20_2")
+            string.concat(".evm.", chainKey, ".MockDAI")
         );
         address payable wrappedNativeAddress = payable(
             json.readAddress(
@@ -55,8 +56,8 @@ contract MintTokensToResolvers is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Get token contracts
-        MockERC20 usdt = MockERC20(usdtAddress);
-        MockERC20 dai = MockERC20(daiAddress);
+        MockUSDT usdt = MockUSDT(usdtAddress);
+        MockDAI dai = MockDAI(daiAddress);
         MockWrappedNative wrappedNative = MockWrappedNative(
             wrappedNativeAddress
         );
