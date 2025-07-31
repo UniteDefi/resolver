@@ -7,7 +7,6 @@ import {
   Message,
   SQSClientConfig,
 } from "@aws-sdk/client-sqs";
-import { ethers } from "ethers";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -19,15 +18,17 @@ export interface SQSOrderMessage {
   auctionStartPrice: string;
   auctionEndPrice: string;
   auctionDuration: number;
+  srcTokenDecimals?: number;
+  dstTokenDecimals?: number;
 }
 
 export class SQSListenerService {
   private sqsClient: SQSClient;
   private queueUrl: string =
-    "https://sqs.us-east-1.amazonaws.com/112639119226/BridgeIntentQueue";
-  private readonly queueName: string = "BridgeIntentQueue";
+    "https://sqs.us-east-1.amazonaws.com/112639119226/UniteDefiIntentQueue";
+  private readonly queueName: string = "UniteDefiIntentQueue";
   private isListening: boolean = false;
-  private messageHandler: ((message: SQSOrderMessage) => Promise<void>) | null =
+  private messageHandler: ((message: SQSOrderMessage, receiptHandle?: string) => Promise<void>) | null =
     null;
 
   constructor() {
@@ -50,7 +51,7 @@ export class SQSListenerService {
   }
 
   setMessageHandler(
-    handler: (message: SQSOrderMessage) => Promise<void>
+    handler: (message: SQSOrderMessage, receiptHandle?: string) => Promise<void>
   ): void {
     this.messageHandler = handler;
   }
@@ -80,7 +81,7 @@ export class SQSListenerService {
       QueueUrl: this.queueUrl!,
       MaxNumberOfMessages: 10, // Process up to 10 messages at once
       WaitTimeSeconds: 20, // Long polling
-      VisibilityTimeout: 300, // 5 minutes to process
+      VisibilityTimeout: 30, // 30 seconds - short timeout to allow other resolvers to see message quickly
       MessageAttributeNames: ["All"],
       AttributeNames: ["All"],
     };
@@ -123,13 +124,14 @@ export class SQSListenerService {
 
       // Call the handler
       if (this.messageHandler) {
-        await this.messageHandler(orderMessage);
+        // Pass the receipt handle so the handler can delete if it commits
+        await this.messageHandler(orderMessage, message.ReceiptHandle);
       }
 
-      // Delete message after successful processing
-      await this.deleteMessage(message.ReceiptHandle!);
+      // DO NOT delete message here - let the resolver delete it only if it commits
+      // This allows other resolvers to see and process the same order
       console.log(
-        `[SQS Listener] Successfully processed order ${orderMessage.orderId}`
+        `[SQS Listener] Processed order ${orderMessage.orderId} (message remains in queue)`
       );
     } catch (error) {
       console.error("[SQS Listener] Error processing message:", error);
@@ -138,7 +140,7 @@ export class SQSListenerService {
     }
   }
 
-  private async deleteMessage(receiptHandle: string): Promise<void> {
+  async deleteMessage(receiptHandle: string): Promise<void> {
     const params: DeleteMessageCommandInput = {
       QueueUrl: this.queueUrl!,
       ReceiptHandle: receiptHandle,
@@ -166,13 +168,17 @@ export class SQSListenerService {
     }
 
     const progress = elapsed / (duration * 1000);
-    const startBn = ethers.parseUnits(startPrice, 6);
-    const endBn = ethers.parseUnits(endPrice, 6);
-
-    const priceDiff = startBn - endBn;
-    const currentPrice =
-      startBn - (priceDiff * BigInt(Math.floor(progress * 1000))) / 1000n;
-
-    return ethers.formatUnits(currentPrice, 6);
+    
+    // Prices are already in human-readable format (e.g., "102.0", "95.0")
+    // No need to parse/format with decimals
+    const startPriceFloat = parseFloat(startPrice);
+    const endPriceFloat = parseFloat(endPrice);
+    
+    // Linear interpolation between start and end price
+    const priceDiff = startPriceFloat - endPriceFloat;
+    const currentPriceFloat = startPriceFloat - (priceDiff * progress);
+    
+    // Return as string with appropriate precision
+    return currentPriceFloat.toFixed(6);
   }
 }
