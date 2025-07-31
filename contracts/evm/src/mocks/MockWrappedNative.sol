@@ -2,12 +2,13 @@
 pragma solidity 0.8.23;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MockWrappedNative is ERC20 {
+contract MockWrappedNative is ERC20, Ownable {
     event Deposit(address indexed dst, uint256 wad);
     event Withdrawal(address indexed src, uint256 wad);
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) Ownable(msg.sender) {}
 
     receive() external payable {
         deposit();
@@ -23,5 +24,10 @@ contract MockWrappedNative is ERC20 {
         _burn(msg.sender, wad);
         payable(msg.sender).transfer(wad);
         emit Withdrawal(msg.sender, wad);
+    }
+
+    // Mint function for testing purposes
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
     }
 }
