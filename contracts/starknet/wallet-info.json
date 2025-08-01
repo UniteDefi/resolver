@@ -1,0 +1,17 @@
+{
+  "network": "starknet-sepolia",
+  "address": "0x7eef174fd55eb8407485bcc5ab3c03b55fc0c88a2e2679eb03349875466cbf9",
+  "publicKey": "0x7d9d0ca20c61658f72beed921eac2f969dd4a97896733f42d989552b3d31542",
+  "privateKey": "0x4610ddd806759fa9707bee62dbdcc187d049e064f58df71f78d5e4ce8e8bd0b",
+  "classHash": "0x04c6d6cf894f8bc96bb9c525e6853e5483177841f7388f74a46cfda6f028c755",
+  "generatedAt": "2025-08-01T15:42:09.580Z",
+  "status": "NOT_DEPLOYED",
+  "deploymentInstructions": {
+    "step1": "Fund the wallet address with ETH on Starknet Sepolia testnet",
+    "step2": "Run 'yarn deploy:account' to deploy the account contract",
+    "faucets": [
+      "https://faucet.starknet.io/",
+      "https://starknet-faucet.vercel.app/"
+    ]
+  }
+}
