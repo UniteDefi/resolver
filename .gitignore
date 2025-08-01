@@ -144,3 +144,5 @@ gasless_resolvers.log
 broadcast/
 
 lib/
+
+wallets.json
