@@ -1,0 +1,54 @@
+{
+  "networks": {
+    "cardano": {
+      "testnet": {
+        "networkId": 0,
+        "protocolMagic": 1097911063,
+        "rpc": "https://cardano-testnet.blockfrost.io/api/v0",
+        "blockfrost": {
+          "projectId": "testnet_project_id_here"
+        },
+        "validators": {
+          "htlc": {
+            "scriptHash": "addr_test1wphtlc_validator_hash_here",
+            "address": "addr_test1wphtlc_validator_address_here",
+            "compiledCodeFile": "./validators/htlc.plutus"
+          }
+        }
+      },
+      "mainnet": {
+        "networkId": 1,
+        "protocolMagic": 764824073,
+        "rpc": "https://cardano-mainnet.blockfrost.io/api/v0",
+        "blockfrost": {
+          "projectId": "mainnet_project_id_here"
+        },
+        "validators": {
+          "htlc": {
+            "scriptHash": "addr1w_htlc_validator_hash_here",
+            "address": "addr1w_htlc_validator_address_here",
+            "compiledCodeFile": "./validators/htlc.plutus"
+          }
+        }
+      }
+    },
+    "evm": {
+      "base_sepolia": {
+        "chainId": 84532,
+        "rpc": "https://sepolia.base.org",
+        "htlc": {
+          "address": "0x1234567890123456789012345678901234567890",
+          "deployedBlock": 12345678
+        }
+      }
+    }
+  },
+  "relayer": {
+    "endpoints": [
+      "https://relayer1.crosschain.io",
+      "https://relayer2.crosschain.io"
+    ],
+    "fee": 0.001,
+    "timeout": 3600
+  }
+}
