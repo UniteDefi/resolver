@@ -1,0 +1,92 @@
+{
+  "version": "eosio::abi/1.2",
+  "types": [],
+  "structs": [
+    {
+      "name": "counters",
+      "base": "",
+      "fields": [
+        {"name": "user", "type": "name"},
+        {"name": "value", "type": "uint64"},
+        {"name": "last_modified", "type": "uint64"}
+      ]
+    },
+    {
+      "name": "increment",
+      "base": "",
+      "fields": [
+        {"name": "user", "type": "name"}
+      ]
+    },
+    {
+      "name": "decrement",
+      "base": "",
+      "fields": [
+        {"name": "user", "type": "name"}
+      ]
+    },
+    {
+      "name": "reset",
+      "base": "",
+      "fields": [
+        {"name": "user", "type": "name"}
+      ]
+    },
+    {
+      "name": "getvalue",
+      "base": "",
+      "fields": [
+        {"name": "user", "type": "name"}
+      ]
+    },
+    {
+      "name": "notify",
+      "base": "",
+      "fields": [
+        {"name": "user", "type": "name"},
+        {"name": "value", "type": "uint64"}
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "increment",
+      "type": "increment",
+      "ricardian_contract": ""
+    },
+    {
+      "name": "decrement",
+      "type": "decrement",
+      "ricardian_contract": ""
+    },
+    {
+      "name": "reset",
+      "type": "reset",
+      "ricardian_contract": ""
+    },
+    {
+      "name": "getvalue",
+      "type": "getvalue",
+      "ricardian_contract": ""
+    },
+    {
+      "name": "notify",
+      "type": "notify",
+      "ricardian_contract": ""
+    }
+  ],
+  "tables": [
+    {
+      "name": "counters",
+      "index_type": "i64",
+      "type": "counters",
+      "key_names": ["user"],
+      "key_types": ["name"]
+    }
+  ],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": [],
+  "variants": [],
+  "action_results": []
+}
