@@ -1,0 +1,31 @@
+[workspace]
+members = ["contracts/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/your-repo/neutron-contracts"
+
+[workspace.dependencies]
+cosmwasm-std = "1.4"
+cosmwasm-storage = "1.4"
+cosmwasm-schema = "1.4"
+cw-storage-plus = "1.1"
+cw2 = "1.1"
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+thiserror = "1.0"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
