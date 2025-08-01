@@ -1,0 +1,9 @@
+{
+  "contractId": "CABNSB7GMZM5BC6IM62E5JNUBHNSUIJQUFQRNPLYMKTKD466RSVS2XIQ",
+  "network": "testnet",
+  "deployedAt": "2025-08-01T00:00:00Z",
+  "deployer": "GABMJQZFSEXOGCX5KDZGCQXSAM4YYIDWTBSOPU5GPWBJDYH4RLT7KCEY",
+  "wasmHash": "47fad087579f9047fd0c37ca74ac2d1f1ffa6dad064c49e3edd15e5a4e1a96a9",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "explorerUrl": "https://stellar.expert/explorer/testnet/contract/CABNSB7GMZM5BC6IM62E5JNUBHNSUIJQUFQRNPLYMKTKD466RSVS2XIQ"
+}
