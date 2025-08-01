@@ -1,0 +1,8 @@
+{
+  "network": "preprod",
+  "scriptAddress": "addr_test1wq204wz4tc0z5lef3adq9ajmqtgadsl66z78yfqw8re9jcgpyy0k",
+  "scriptHash": "d4f7b8b5c3e2a1f9d8c7b6a5e4d3c2b1a0f9e8d7c6b5a4e3d2c1b0",
+  "deployedAt": "2025-08-01T15:23:19.180Z",
+  "deploymentTx": "mock_tx_1754061799181",
+  "note": "This is a mock deployment for testing. In production, you would need Aiken CLI installed and lucid-cardano working properly."
+}

@@ -1,0 +1,14 @@
+name = "unite-defi/counter_validator"  
+version = "0.0.0"
+license = "Apache-2.0"
+description = "A simple counter validator for Cardano"
+
+[repository]
+user = "unite-defi"
+project = "counter_validator"
+platform = "github"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "1.9.0"
+source = "github"
