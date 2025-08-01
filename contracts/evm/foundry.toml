@@ -6,7 +6,7 @@ libs = ['lib']
 
 via_ir = true
 optimizer_runs = 1000000
-eth-rpc-url = 'http://localhost:8545'
+# eth-rpc-url = 'http://localhost:8545'
 
 fs_permissions = [{ access = "read", path = "dist/contracts" },{ access = "read", path = "deployments.json" }, { access = "read-write", path = ".forge-snapshots/" }]
 
