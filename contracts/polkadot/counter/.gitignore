@@ -1,0 +1,11 @@
+# Ignore build artifacts from ink!
+/target/
+*.contract
+*.wasm
+*.json
+
+# Ignore backup files
+*~
+
+# Ignore macOS specific files
+.DS_Store
