@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "canisters": {
+    "counter": {
+      "type": "motoko",
+      "main": "src/counter/main.mo"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "",
+      "args": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "testnet": {
+      "providers": ["https://testnet.dfinity.network"],
+      "type": "persistent"
+    },
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent"
+    }
+  }
+}
