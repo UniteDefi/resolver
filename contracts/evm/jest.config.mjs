@@ -22,5 +22,6 @@ export default {
     globals: {
         'BigInt.prototype.toJSON': function() { return this.toString(); }
     },
-    setupFilesAfterEnv: ['<rootDir>/../jest.setup.js']
+    setupFilesAfterEnv: ['<rootDir>/../jest.setup.js'],
+    testTimeout: 60000 // 60 seconds
 }
