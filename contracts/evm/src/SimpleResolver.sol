@@ -26,6 +26,7 @@ contract SimpleResolver is Ownable {
 
     event SrcEscrowDeployed(address indexed escrow, bytes32 indexed orderHash);
     event DstEscrowDeployed(address indexed escrow, bytes32 indexed orderHash);
+    event Debug(string message, address addr);
 
     constructor(IEscrowFactory factory, IOrderMixin lop, address initialOwner) Ownable(initialOwner) {
         _FACTORY = factory;
@@ -50,22 +51,16 @@ contract SimpleResolver is Ownable {
         bytes32 vs,
         uint256 amount
     ) external payable onlyOwner {
-        // Update immutables with deployment timestamp
-        IBaseEscrow.Immutables memory immutablesMem = immutables;
-        immutablesMem.timelocks = immutablesMem.timelocks.setDeployedAt(block.timestamp);
-        
-        // Calculate escrow address
-        address escrowAddress = _FACTORY.addressOfEscrowSrc(immutablesMem);
+        // Add debug event
+        emit Debug("deploySrcCompact called", msg.sender);
+        // Create the escrow (it will set the deployed timestamp)
+        address escrowAddress = _FACTORY.createSrcEscrow{value: msg.value}(immutables);
         require(escrowAddress != address(0), "Invalid escrow address");
-
-        // Send safety deposit to escrow address
-        (bool success,) = escrowAddress.call{value: msg.value}("");
-        if (!success) revert TransferFailed();
 
         // Set TakerTraits with target flag (bit 251)
         IOrderMixin.TakerTraits takerTraits = IOrderMixin.TakerTraits.wrap(uint256(1 << 251));
         
-        // Encode escrow address as target in args
+        // Encode escrow address as target in args (first 20 bytes, no padding)
         bytes memory args = abi.encodePacked(escrowAddress);
         
         // Fill the order, which will transfer tokens to escrow
@@ -118,7 +113,7 @@ contract SimpleResolver is Ownable {
         // Set TakerTraits with target flag (bit 251)
         IOrderMixin.TakerTraits takerTraits = IOrderMixin.TakerTraits.wrap(uint256(1 << 251));
         
-        // Encode escrow address as target in args
+        // Encode escrow address as target in args (first 20 bytes, no padding)
         bytes memory args = abi.encodePacked(escrowAddress);
         
         // Fill the order, which will transfer tokens to escrow
