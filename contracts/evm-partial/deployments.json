@@ -1,0 +1,37 @@
+{
+  "evm": {
+    "base_sepolia": {
+      "chainId": 84532,
+      "name": "Base Sepolia",
+      "UniteLimitOrderProtocol": "0x8F65f257A27681B80AE726BCbEdE186DCA702746",
+      "UniteEscrowFactory": "0xF704A173a3Ba9B7Fc0686d14C0cD94fce60102B7",
+      "UniteResolver0": "0x80A2EDaB44AD892d477F6B80fAa06881Fb52Af5B",
+      "UniteResolver1": "0x39853F411466B2E908AD61E08D6c12f1aC7e006b",
+      "UniteResolver2": "0x518aBAcDb21924F476Eda85cC47B2F43bA834319",
+      "UniteResolver3": "0x9C04003f13447ecb51651B74966Edf196F2AD1C5",
+      "MockUSDT": "0x97a2d8Dfece96252518a4327aFFf40B61A0a025A",
+      "MockDAI": "0x45A3AF79Ad654e75114988Abd92615eD79754eF5",
+      "MockWrappedNative": "0x67f4840a271fd6f130324F576312eCd806Cc9545"
+    },
+    "arb_sepolia": {
+      "chainId": 421614,
+      "name": "Arbitrum Sepolia",
+      "UniteLimitOrderProtocol": "0xB6E8299b7e652b9634c39c847909BA8eb1aE139a",
+      "UniteEscrowFactory": "0xA608aCAf4d925239691dab7D8D50A681949096e7",
+      "UniteResolver0": "0xd2EdFCc326169378847bAE656faFE3A3879bd614",
+      "UniteResolver1": "0x84EB04A8095DEDec6EB6726f2490a4B82E985bFc",
+      "UniteResolver2": "0xbFA770A14aA17cE07D55b21e84Ef09c2d5AdD959",
+      "UniteResolver3": "0x5a96bc5356b90dED42926227F214d55cEb1C7c5E",
+      "MockUSDT": "0x84159eadE815141727FeE309fDdaaf7BCF36cFF9",
+      "MockDAI": "0x79899508A267fCC3E5F838a488b7eFA2D8f32659",
+      "MockWrappedNative": "0x630b2EBcA37EeE832c1c6982858ec552afc05605"
+    },
+    "eth_sepolia": {
+      "chainId": 11155111,
+      "name": "Ethereum Sepolia",
+      "UniteLimitOrderProtocol": "0xd5C22ee895b3bB83F4f11e5e8249c477431b9A12",
+      "UniteEscrowFactory": "0xb6846E0b849109c10e07093fBB0CAb901FCB1f9a",
+      "UniteResolver": "0x1dbE5e63D734707eB7c6D4608c968AFe6B35A233"
+    }
+  }
+}
