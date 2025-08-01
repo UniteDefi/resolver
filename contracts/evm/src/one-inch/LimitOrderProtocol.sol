@@ -134,21 +134,11 @@ contract LimitOrderProtocol is ISimpleOrderProtocol, IOrderMixin, EIP712, Reentr
         emit OrderCancelled(orderHash);
     }
 
-    function hashOrder(ISimpleOrder.Order calldata order) public view override returns (bytes32) {
+    function hashOrder(ISimpleOrder.Order calldata order) public pure override returns (bytes32) {
         return keccak256(abi.encode(
-            "Order(",
-            "uint256 salt,",
-            "address maker,",
-            "address receiver,",
-            "address makerAsset,",
-            "address takerAsset,",
-            "uint256 makingAmount,",
-            "uint256 takingAmount,",
-            "uint256 deadline,",
-            "uint256 nonce,",
-            "uint256 srcChainId,",
-            "uint256 dstChainId",
-            ")",
+            keccak256(
+                "Order(uint256 salt,address maker,address receiver,address makerAsset,address takerAsset,uint256 makingAmount,uint256 takingAmount,uint256 deadline,uint256 nonce,uint256 srcChainId,uint256 dstChainId)"
+            ),
             order.salt,
             order.maker,
             order.receiver,
