@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.23;
 
-import "../lib/cross-chain-swap/contracts/EscrowFactory.sol";
+import "./SimpleEscrowFactory.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
@@ -12,11 +12,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * @notice Extends 1inch EscrowFactory to allow users to approve funds to this contract
  * @dev Only authorized relayers can transfer user funds to escrows
  */
-contract UniteEscrowFactory is EscrowFactory, ReentrancyGuard {
+contract UniteEscrowFactory is SimpleEscrowFactory, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    
-    // Owner storage (since EscrowFactory doesn't expose owner modifier)
-    address private _owner;
     
     // Mapping of authorized relayer addresses
     mapping(address => bool) public authorizedRelayers;
@@ -31,32 +28,14 @@ contract UniteEscrowFactory is EscrowFactory, ReentrancyGuard {
         uint256 amount
     );
     
-    modifier onlyOwner() {
-        require(msg.sender == _owner, "Not owner");
-        _;
-    }
-    
     modifier onlyAuthorizedRelayer() {
         require(authorizedRelayers[msg.sender], "Unauthorized relayer");
         _;
     }
     
     constructor(
-        address limitOrderProtocol,
-        IERC20 feeToken,
-        IERC20 accessToken,
-        address initialOwner,
-        uint32 rescueDelaySrc,
-        uint32 rescueDelayDst
-    ) EscrowFactory(
-        limitOrderProtocol,
-        feeToken,
-        accessToken,
-        initialOwner,
-        rescueDelaySrc,
-        rescueDelayDst
-    ) {
-        _owner = initialOwner;
+        address initialOwner
+    ) SimpleEscrowFactory(initialOwner) {
         // Authorize the owner as initial relayer
         authorizedRelayers[initialOwner] = true;
     }
@@ -102,12 +81,5 @@ contract UniteEscrowFactory is EscrowFactory, ReentrancyGuard {
         IERC20(token).safeTransferFrom(user, escrow, amount);
         
         emit UserFundsTransferredToEscrow(user, escrow, token, amount);
-    }
-    
-    /**
-     * @notice Get the owner address
-     */
-    function owner() external view returns (address) {
-        return _owner;
     }
 }
