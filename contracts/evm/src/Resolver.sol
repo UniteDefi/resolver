@@ -4,17 +4,12 @@ pragma solidity 0.8.23;
 
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import {IOrderMixin} from "limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
-import {TakerTraits} from "limit-order-protocol/contracts/libraries/TakerTraitsLib.sol";
-
-import {IResolverExample} from "../lib/cross-chain-swap/contracts/interfaces/IResolverExample.sol";
-import {RevertReasonForwarder} from "../lib/cross-chain-swap/lib/solidity-utils/contracts/libraries/RevertReasonForwarder.sol";
-import {IEscrowFactory} from "../lib/cross-chain-swap/contracts/interfaces/IEscrowFactory.sol";
-import {IBaseEscrow} from "../lib/cross-chain-swap/contracts/interfaces/IBaseEscrow.sol";
-import {TimelocksLib, Timelocks} from "../lib/cross-chain-swap/contracts/libraries/TimelocksLib.sol";
-import {Address} from "solidity-utils/contracts/libraries/AddressLib.sol";
-import {IEscrow} from "../lib/cross-chain-swap/contracts/interfaces/IEscrow.sol";
-import {ImmutablesLib} from "../lib/cross-chain-swap/contracts/libraries/ImmutablesLib.sol";
+import "./interfaces/IOrderMixin.sol";
+import "./interfaces/IEscrowFactory.sol";
+import "./interfaces/IBaseEscrow.sol";
+import "./interfaces/IEscrow.sol";
+import "./libraries/TimelocksLib.sol";
+import "./libraries/ImmutablesLib.sol";
 
 /**
  * @title Sample implementation of a Resolver contract for cross-chain swap.
@@ -26,7 +21,7 @@ import {ImmutablesLib} from "../lib/cross-chain-swap/contracts/libraries/Immutab
  */
 contract Resolver is Ownable {
     using ImmutablesLib for IBaseEscrow.Immutables;
-    using TimelocksLib for Timelocks;
+    using TimelocksLib for uint256;
 
     error InvalidLength();
     error LengthMismatch();
@@ -50,19 +45,19 @@ contract Resolver is Ownable {
         bytes32 r,
         bytes32 vs,
         uint256 amount,
-        TakerTraits takerTraits,
+        IOrderMixin.TakerTraits takerTraits,
         bytes calldata args
     ) external payable onlyOwner {
 
         IBaseEscrow.Immutables memory immutablesMem = immutables;
-        immutablesMem.timelocks = TimelocksLib.setDeployedAt(immutables.timelocks, block.timestamp);
+        immutablesMem.timelocks = immutablesMem.timelocks.setDeployedAt(block.timestamp);
         address computed = _FACTORY.addressOfEscrowSrc(immutablesMem);
 
         (bool success,) = address(computed).call{value: msg.value}("");
         if (!success) revert IBaseEscrow.NativeTokenSendingFailure();
 
         // _ARGS_HAS_TARGET = 1 << 251
-        takerTraits = TakerTraits.wrap(TakerTraits.unwrap(takerTraits) | uint256(1 << 251));
+        takerTraits = IOrderMixin.TakerTraits.wrap(IOrderMixin.TakerTraits.unwrap(takerTraits) | uint256(1 << 251));
         bytes memory argsMem = abi.encodePacked(computed, args);
         _LOP.fillOrderArgs(order, r, vs, amount, takerTraits, argsMem);
     }
@@ -91,8 +86,18 @@ contract Resolver is Ownable {
         if (targets.length != arguments.length) revert LengthMismatch();
         for (uint256 i = 0; i < length; ++i) {
             // solhint-disable-next-line avoid-low-level-calls
-            (bool success,) = targets[i].call(arguments[i]);
-            if (!success) RevertReasonForwarder.reRevert();
+            (bool success, bytes memory result) = targets[i].call(arguments[i]);
+            if (!success) {
+                // Forward the revert reason
+                if (result.length > 0) {
+                    assembly {
+                        let size := mload(result)
+                        revert(add(32, result), size)
+                    }
+                } else {
+                    revert("Call failed");
+                }
+            }
         }
     }
 }
