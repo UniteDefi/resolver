@@ -1,0 +1,21 @@
+{
+  "name": "sui-counter",
+  "version": "1.0.0",
+  "description": "Sui Counter example with TypeScript tests",
+  "scripts": {
+    "test": "jest",
+    "deploy": "ts-node scripts/deploy.ts",
+    "build": "sui move build"
+  },
+  "devDependencies": {
+    "@mysten/sui.js": "^0.54.1",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.30",
+    "dotenv": "^16.4.5",
+    "jest": "^29.7.0",
+    "jest-util": "^30.0.5",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}
