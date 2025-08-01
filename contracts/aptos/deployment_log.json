@@ -1,0 +1,168 @@
+{
+  "timestamp": "2025-08-02T20:00:10.717Z",
+  "network": "testnet",
+  "packageAddress": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c",
+  "steps": [
+    {
+      "step": 1,
+      "action": "Test coins already available (TestUSDT, TestDAI)",
+      "timestamp": "2025-08-02T20:00:09.325Z"
+    },
+    {
+      "step": 2,
+      "action": "Failed to initialize resolver 0: AptosApiError: Request to [Fullnode]: POST https://api.testnet.aptoslabs.com/v1/transactions (trace_id:af97629c59b4fabe8afad2cd13835ee2) failed with: {\"message\":\"Invalid transaction: Type: Validation Code: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE\",\"error_code\":\"vm_error\",\"vm_error_code\":5}",
+      "timestamp": "2025-08-02T20:00:09.979Z"
+    },
+    {
+      "step": 3,
+      "action": "Failed to initialize resolver 1: AptosApiError: Request to [Fullnode]: POST https://api.testnet.aptoslabs.com/v1/transactions (trace_id:0fe7a0b638a865d4a5f1bf1bd18bde9e) failed with: {\"message\":\"Invalid transaction: Type: Validation Code: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE\",\"error_code\":\"vm_error\",\"vm_error_code\":5}",
+      "timestamp": "2025-08-02T20:00:10.194Z"
+    },
+    {
+      "step": 4,
+      "action": "Failed to initialize resolver 2: AptosApiError: Request to [Fullnode]: POST https://api.testnet.aptoslabs.com/v1/transactions (trace_id:0072080c953416d8a5f1bf1bd18bd88d) failed with: {\"message\":\"Invalid transaction: Type: Validation Code: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE\",\"error_code\":\"vm_error\",\"vm_error_code\":5}",
+      "timestamp": "2025-08-02T20:00:10.403Z"
+    },
+    {
+      "step": 5,
+      "action": "Failed to initialize resolver 3: AptosApiError: Request to [Fullnode]: POST https://api.testnet.aptoslabs.com/v1/transactions (trace_id:ebb9963183de1cfaa5f1bf1bd18bdc6b) failed with: {\"message\":\"Invalid transaction: Type: Validation Code: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE\",\"error_code\":\"vm_error\",\"vm_error_code\":5}",
+      "timestamp": "2025-08-02T20:00:10.606Z"
+    },
+    {
+      "step": 6,
+      "action": "Failed to mint tokens: Error: '0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::mint_usdt' is not an entry function",
+      "timestamp": "2025-08-02T20:00:10.713Z"
+    },
+    {
+      "step": 7,
+      "action": "Failed to mint tokens: Error: '0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::mint_usdt' is not an entry function",
+      "timestamp": "2025-08-02T20:00:10.713Z"
+    },
+    {
+      "step": 8,
+      "action": "Failed to mint tokens: Error: '0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::mint_usdt' is not an entry function",
+      "timestamp": "2025-08-02T20:00:10.714Z"
+    },
+    {
+      "step": 9,
+      "action": "Failed to mint tokens: Error: '0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::mint_usdt' is not an entry function",
+      "timestamp": "2025-08-02T20:00:10.714Z"
+    },
+    {
+      "step": 10,
+      "action": "Failed to mint tokens: Error: '0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::mint_usdt' is not an entry function",
+      "timestamp": "2025-08-02T20:00:10.714Z"
+    },
+    {
+      "step": 11,
+      "action": "Created cross-chain limit order",
+      "result": {
+        "salt": 1754164810715,
+        "maker": "0x81872a4867f780c33b3159bdcfd70b84dd9bd8f52fd4239eddcec235078c57dc",
+        "receiver": "0x81872a4867f780c33b3159bdcfd70b84dd9bd8f52fd4239eddcec235078c57dc",
+        "maker_asset": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestUSDT",
+        "taker_asset": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestDAI",
+        "making_amount": 100000000,
+        "taking_amount": 95,
+        "deadline": 1754168410,
+        "nonce": 0,
+        "src_chain_id": 2,
+        "dst_chain_id": 84532,
+        "auction_start_time": 1754164810,
+        "auction_end_time": 1754166610,
+        "start_price": 1000000,
+        "end_price": 950000
+      },
+      "timestamp": "2025-08-02T20:00:10.715Z"
+    },
+    {
+      "step": 12,
+      "action": "Generated HTLC secret",
+      "result": {
+        "secretLength": 32
+      },
+      "timestamp": "2025-08-02T20:00:10.716Z"
+    },
+    {
+      "step": 13,
+      "action": "Source escrow would be created on Aptos (simulated)",
+      "timestamp": "2025-08-02T20:00:10.716Z"
+    },
+    {
+      "step": 14,
+      "action": "Destination escrow would be created on Base Sepolia (simulated)",
+      "timestamp": "2025-08-02T20:00:10.716Z"
+    },
+    {
+      "step": 15,
+      "action": "Resolver deposits funds to escrows (simulated)",
+      "timestamp": "2025-08-02T20:00:10.716Z"
+    },
+    {
+      "step": 16,
+      "action": "Secret revealed and funds withdrawn (simulated)",
+      "result": {
+        "secret": "8682ea158b7dd12f..."
+      },
+      "timestamp": "2025-08-02T20:00:10.716Z"
+    },
+    {
+      "step": 17,
+      "action": "Created reverse cross-chain limit order",
+      "result": {
+        "salt": 1754164810718,
+        "maker": "0x1111111111111111111111111111111111111111",
+        "receiver": "0x81872a4867f780c33b3159bdcfd70b84dd9bd8f52fd4239eddcec235078c57dc",
+        "maker_asset": "MockDAI",
+        "taker_asset": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestUSDT",
+        "making_amount": 100,
+        "taking_amount": 105000000,
+        "deadline": 1754168410,
+        "nonce": 0,
+        "src_chain_id": 84532,
+        "dst_chain_id": 2,
+        "auction_start_time": 1754164810,
+        "auction_end_time": 1754166610,
+        "start_price": 1050000,
+        "end_price": 1000000
+      },
+      "timestamp": "2025-08-02T20:00:10.717Z"
+    },
+    {
+      "step": 18,
+      "action": "Generated HTLC secret for reverse swap",
+      "result": {
+        "secretLength": 32
+      },
+      "timestamp": "2025-08-02T20:00:10.717Z"
+    },
+    {
+      "step": 19,
+      "action": "Source escrow would be created on Base Sepolia (simulated)",
+      "timestamp": "2025-08-02T20:00:10.717Z"
+    },
+    {
+      "step": 20,
+      "action": "Destination escrow would be created on Aptos (simulated)",
+      "timestamp": "2025-08-02T20:00:10.717Z"
+    },
+    {
+      "step": 21,
+      "action": "Resolver deposits funds to escrows (simulated)",
+      "timestamp": "2025-08-02T20:00:10.717Z"
+    },
+    {
+      "step": 22,
+      "action": "Secret revealed and funds withdrawn (simulated)",
+      "result": {
+        "secret": "b130025d5b6a2f78..."
+      },
+      "timestamp": "2025-08-02T20:00:10.717Z"
+    }
+  ],
+  "summary": {
+    "totalSteps": 22,
+    "successful": 18,
+    "failed": 4
+  }
+}
