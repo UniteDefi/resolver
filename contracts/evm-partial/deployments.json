@@ -69,6 +69,94 @@
       "MockUSDT": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
       "MockDAI": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
       "MockWrappedNative": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286"
+    },
+    "op_sepolia": {
+      "chainId": 11155420,
+      "name": "Optimism Sepolia",
+      "UniteLimitOrderProtocol": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteEscrowFactory": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver0": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "UniteResolver1": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
+    },
+    "polygon_amoy": {
+      "chainId": 80002,
+      "name": "Polygon Amoy",
+      "UniteLimitOrderProtocol": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "UniteEscrowFactory": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "UniteResolver0": "0x06300658371f2303313b9DaCDD0106D05b40f168",
+      "UniteResolver1": "0x4f8fff737827419CD631699054060fB84098fff0",
+      "MockUSDT": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "MockDAI": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "MockWrappedNative": "0x9534aA529da38b74577474aBBD5B0296ae834011"
+    },
+    "scroll_sepolia": {
+      "chainId": 534351,
+      "name": "Scroll Sepolia",
+      "UniteLimitOrderProtocol": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteEscrowFactory": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver0": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "UniteResolver1": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
+    },
+    "celo_alfajores": {
+      "chainId": 44787,
+      "name": "Celo Alfajores",
+      "UniteLimitOrderProtocol": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteEscrowFactory": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver0": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "UniteResolver1": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
+    },
+    "unichain_sepolia": {
+      "chainId": 1301,
+      "name": "Unichain Sepolia",
+      "UniteLimitOrderProtocol": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteEscrowFactory": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver0": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "UniteResolver1": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
+    },
+    "sei_testnet": {
+      "chainId": 1328,
+      "name": "Sei Testnet",
+      "UniteLimitOrderProtocol": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "UniteEscrowFactory": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "UniteResolver0": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "UniteResolver1": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
+    },
+    "flow_testnet": {
+      "chainId": 545,
+      "name": "Flow Testnet",
+      "UniteLimitOrderProtocol": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "UniteEscrowFactory": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteResolver0": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver1": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "MockUSDT": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockDAI": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "MockWrappedNative": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286"
+    },
+    "injective_testnet": {
+      "chainId": 1439,
+      "name": "Injective Testnet",
+      "UniteLimitOrderProtocol": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "UniteEscrowFactory": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteResolver0": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver1": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
     }
   }
 }
