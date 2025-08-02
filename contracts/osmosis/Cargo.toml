@@ -1,17 +1,41 @@
 [workspace]
-members = ["contracts/*"]
 resolver = "2"
+members = [
+    "contracts/unite-order-protocol",
+    "contracts/unite-escrow-factory", 
+    "contracts/unite-escrow",
+    "contracts/unite-resolver",
+    "contracts/test-token"
+]
 
 [workspace.package]
-version = "0.1.0"
-authors = ["Unite DeFi Team"]
+version = "1.0.0"
+authors = ["Unite Protocol <dev@unite.com>"]
 edition = "2021"
+description = "Unite cross-chain swap contracts for Osmosis"
+repository = "https://github.com/unite-protocol/osmosis-contracts"
+license = "MIT"
+keywords = ["cosmos", "osmosis", "cosmwasm", "cross-chain", "defi"]
 
 [workspace.dependencies]
 cosmwasm-std = "1.5"
 cosmwasm-storage = "1.5"
 cw-storage-plus = "1.2"
 cw2 = "1.1"
+cw20 = "1.1"
+cw20-base = "1.1"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
+sha2 = "0.10"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
