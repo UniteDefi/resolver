@@ -1,184 +1,476 @@
-module unite_resolver::escrow {
+module aptos_addr::escrow {
     use std::signer;
     use std::vector;
-    use aptos_framework::coin;
+    use aptos_framework::coin::{Self, Coin};
+    use aptos_framework::account;
+    use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::timestamp;
-    use aptos_framework::event;
-    
+    use aptos_framework::aptos_account;
+    use aptos_std::table::{Self, Table};
+
     // Error codes
     const E_NOT_INITIALIZED: u64 = 1;
-    const E_INVALID_HASHLOCK: u64 = 2;
-    const E_INVALID_TIMELOCK: u64 = 3;
-    const E_ALREADY_WITHDRAWN: u64 = 4;
-    const E_ALREADY_REFUNDED: u64 = 5;
-    const E_NOT_REFUNDABLE: u64 = 6;
-    const E_UNAUTHORIZED: u64 = 7;
-    const E_INVALID_SECRET: u64 = 8;
+    const E_INVALID_SECRET: u64 = 2;
+    const E_INVALID_CALLER: u64 = 3;
+    const E_INVALID_TIME: u64 = 4;
+    const E_ALREADY_WITHDRAWN: u64 = 5;
+    const E_ALREADY_CANCELLED: u64 = 6;
+    const E_INVALID_IMMUTABLES: u64 = 7;
+    const E_RESOLVER_ALREADY_EXISTS: u64 = 8;
+    const E_INSUFFICIENT_FUNDS: u64 = 9;
 
-    // Escrow states
+    // State enum
     const STATE_ACTIVE: u8 = 0;
     const STATE_WITHDRAWN: u8 = 1;
-    const STATE_REFUNDED: u8 = 2;
+    const STATE_CANCELLED: u8 = 2;
+
+    // Caller reward percentage (10%)
+    const CALLER_REWARD_PERCENTAGE: u64 = 10;
+
+    struct Immutables has copy, drop, store {
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        token: address, // For Aptos, this will be type info
+        amount: u64,
+        safety_deposit: u64,
+        timelocks: u64,
+    }
+
+    struct ResolverInfo has store {
+        partial_amount: u64,
+        safety_deposit: u64,
+        withdrawn: bool,
+    }
 
     struct Escrow<phantom CoinType> has key {
-        src_address: address,
-        dst_address: address,
-        src_token: address,
-        src_amount: u64,
+        // Immutable data
+        order_hash: vector<u8>,
         hashlock: vector<u8>,
-        secret: vector<u8>,
-        timelock: u64,
+        maker: address,
+        taker: address,
+        amount: u64,
+        safety_deposit: u64, // Total safety deposit
+        timelocks: u64,
+        is_source: bool,
+        src_cancellation_timestamp: u64,
+        
+        // State
         state: u8,
-        escrow_id: vector<u8>,
+        
+        // Partial filling support
+        resolvers: vector<address>,
+        resolver_info: Table<address, ResolverInfo>,
+        total_partial_amount: u64,
+        funds_distributed: bool,
+        user_funded: bool,
+        
+        // Funds storage
+        coin_store: Coin<CoinType>,
+        safety_deposits: Table<address, u64>, // resolver -> safety deposit amount in APT
+        
+        // Events
+        resolver_added_events: EventHandle<ResolverAddedEvent>,
+        withdrawn_events: EventHandle<WithdrawnEvent>,
+        cancelled_events: EventHandle<CancelledEvent>,
+        funds_distributed_events: EventHandle<FundsDistributedEvent>,
     }
 
-    struct EscrowEvents has key {
-        escrow_created_events: event::EventHandle<EscrowCreatedEvent>,
-        escrow_withdrawn_events: event::EventHandle<EscrowWithdrawnEvent>,
-        escrow_refunded_events: event::EventHandle<EscrowRefundedEvent>,
+    struct ResolverAddedEvent has drop, store {
+        resolver: address,
+        partial_amount: u64,
+        safety_deposit: u64,
     }
 
-    struct EscrowCreatedEvent has drop, store {
-        escrow_id: vector<u8>,
-        src_address: address,
-        dst_address: address,
+    struct WithdrawnEvent has drop, store {
+        recipient: address,
         amount: u64,
-        hashlock: vector<u8>,
-        timelock: u64,
     }
 
-    struct EscrowWithdrawnEvent has drop, store {
-        escrow_id: vector<u8>,
-        secret: vector<u8>,
-        withdrawer: address,
-    }
-
-    struct EscrowRefundedEvent has drop, store {
-        escrow_id: vector<u8>,
-        refunder: address,
-    }
-
-    public fun initialize(account: &signer) {
-        move_to(account, EscrowEvents {
-            escrow_created_events: event::new_event_handle<EscrowCreatedEvent>(account),
-            escrow_withdrawn_events: event::new_event_handle<EscrowWithdrawnEvent>(account),
-            escrow_refunded_events: event::new_event_handle<EscrowRefundedEvent>(account),
-        });
-    }
-
-    public entry fun create_escrow<CoinType>(
-        src: &signer,
-        dst_address: address,
+    struct CancelledEvent has drop, store {
+        maker: address,
         amount: u64,
-        hashlock: vector<u8>,
-        timelock: u64,
-        escrow_id: vector<u8>,
-    ) acquires EscrowEvents {
-        let src_address = signer::address_of(src);
+    }
+
+    struct FundsDistributedEvent has drop, store {
+        caller: address,
+        after_time_limit: bool,
+    }
+
+    // Initialize escrow for source chain
+    public fun initialize<CoinType>(
+        account: &signer,
+        immutables: Immutables,
+        is_source: bool,
+        src_cancellation_timestamp: u64,
+    ) {
+        let _account_addr = signer::address_of(account);
         
-        // Validate inputs
-        assert!(vector::length(&hashlock) == 32, E_INVALID_HASHLOCK);
-        assert!(timelock > timestamp::now_seconds(), E_INVALID_TIMELOCK);
-        
-        // Transfer coins to escrow
-        let coins = coin::withdraw<CoinType>(src, amount);
-        
-        // Create escrow
         let escrow = Escrow<CoinType> {
-            src_address,
-            dst_address,
-            src_token: @0x1, // APT token address
-            src_amount: amount,
-            hashlock,
-            secret: vector::empty(),
-            timelock,
+            order_hash: immutables.order_hash,
+            hashlock: immutables.hashlock,
+            maker: immutables.maker,
+            taker: immutables.taker,
+            amount: immutables.amount,
+            safety_deposit: immutables.safety_deposit,
+            timelocks: set_deployed_at(immutables.timelocks, timestamp::now_seconds()),
+            is_source,
+            src_cancellation_timestamp,
             state: STATE_ACTIVE,
-            escrow_id,
+            resolvers: vector::empty(),
+            resolver_info: table::new(),
+            total_partial_amount: 0,
+            funds_distributed: false,
+            user_funded: false,
+            coin_store: coin::zero<CoinType>(),
+            safety_deposits: table::new(),
+            resolver_added_events: account::new_event_handle<ResolverAddedEvent>(account),
+            withdrawn_events: account::new_event_handle<WithdrawnEvent>(account),
+            cancelled_events: account::new_event_handle<CancelledEvent>(account),
+            funds_distributed_events: account::new_event_handle<FundsDistributedEvent>(account),
         };
         
-        // Store escrow under a unique address
-        move_to(src, escrow);
+        move_to(account, escrow);
+    }
+
+    // Add resolver to existing escrow
+    public fun add_resolver<CoinType>(
+        resolver: address,
+        partial_amount: u64,
+        safety_deposit_apt: u64,
+        escrow_addr: address,
+    ) acquires Escrow {
+        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_addr);
         
-        // Emit event
-        let events = borrow_global_mut<EscrowEvents>(@unite_resolver);
-        event::emit_event(&mut events.escrow_created_events, EscrowCreatedEvent {
-            escrow_id,
-            src_address,
-            dst_address,
-            amount,
-            hashlock,
-            timelock,
+        assert!(!table::contains(&escrow.resolver_info, resolver), E_RESOLVER_ALREADY_EXISTS);
+        assert!(partial_amount > 0, E_INVALID_IMMUTABLES);
+        
+        let resolver_info = ResolverInfo {
+            partial_amount,
+            safety_deposit: safety_deposit_apt,
+            withdrawn: false,
+        };
+        
+        table::add(&mut escrow.resolver_info, resolver, resolver_info);
+        vector::push_back(&mut escrow.resolvers, resolver);
+        table::add(&mut escrow.safety_deposits, resolver, safety_deposit_apt);
+        escrow.total_partial_amount = escrow.total_partial_amount + partial_amount;
+        
+        event::emit_event(&mut escrow.resolver_added_events, ResolverAddedEvent {
+            resolver,
+            partial_amount,
+            safety_deposit: safety_deposit_apt,
         });
     }
 
-    public entry fun withdraw<CoinType>(
-        withdrawer: &signer,
-        escrow_holder: address,
+    // Deposit coins into escrow
+    public fun deposit_coins<CoinType>(
+        coins: Coin<CoinType>,
+        escrow_addr: address,
+    ) acquires Escrow {
+        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_addr);
+        coin::merge(&mut escrow.coin_store, coins);
+    }
+
+    // Mark that user has funded the escrow
+    public fun mark_user_funded<CoinType>(escrow_addr: address) acquires Escrow {
+        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_addr);
+        escrow.user_funded = true;
+    }
+
+    // Withdraw with secret - permissionless
+    public fun withdraw_with_secret<CoinType>(
+        caller: address,
         secret: vector<u8>,
-    ) acquires Escrow, EscrowEvents {
-        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_holder);
+        immutables: Immutables,
+        escrow_addr: address,
+    ) acquires Escrow {
+        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_addr);
         
-        // Validate withdrawal
-        assert!(escrow.state == STATE_ACTIVE, E_ALREADY_WITHDRAWN);
-        assert!(signer::address_of(withdrawer) == escrow.dst_address, E_UNAUTHORIZED);
+        // Verify state
+        assert!(escrow.state == STATE_ACTIVE, E_INVALID_TIME);
+        assert!(!escrow.funds_distributed, E_ALREADY_WITHDRAWN);
         
         // Verify secret
-        let secret_hash = hash::sha3_256(secret);
-        assert!(secret_hash == escrow.hashlock, E_INVALID_SECRET);
+        let computed_hash = aptos_std::aptos_hash::keccak256(secret);
+        assert!(computed_hash == escrow.hashlock, E_INVALID_SECRET);
         
-        // Update state
+        // Verify immutables
+        verify_immutables(&immutables, escrow);
+        
+        // For destination chain, check all resolvers deposited
+        if (!escrow.is_source) {
+            let current_balance = coin::value(&escrow.coin_store);
+            assert!(current_balance >= escrow.total_partial_amount, E_INVALID_TIME);
+        };
+        
+        // Check if caller should get reward
+        let current_time = timestamp::now_seconds();
+        let deployed_at = get_deployed_at(escrow.timelocks);
+        let public_withdrawal_time = if (escrow.is_source) {
+            deployed_at + get_src_public_withdrawal(escrow.timelocks)
+        } else {
+            deployed_at + get_dst_public_withdrawal(escrow.timelocks)
+        };
+        
+        let is_after_time_limit = current_time >= public_withdrawal_time;
+        
+        // Calculate caller reward
+        let caller_reward = 0;
+        if (is_after_time_limit && caller != escrow.maker && !is_resolver(escrow, caller)) {
+            let total_safety_deposits = calculate_total_safety_deposits(escrow);
+            caller_reward = (total_safety_deposits * CALLER_REWARD_PERCENTAGE) / 100;
+        };
+        
+        escrow.funds_distributed = true;
+        
+        if (escrow.is_source) {
+            distribute_source_funds(escrow, caller_reward, caller);
+        } else {
+            distribute_destination_funds(escrow, caller_reward, caller);
+        };
+        
         escrow.state = STATE_WITHDRAWN;
-        escrow.secret = secret;
         
-        // Transfer coins to withdrawer
-        let coins = coin::withdraw<CoinType>(&escrow_holder, escrow.src_amount);
-        coin::deposit(signer::address_of(withdrawer), coins);
-        
-        // Emit event
-        let events = borrow_global_mut<EscrowEvents>(@unite_resolver);
-        event::emit_event(&mut events.escrow_withdrawn_events, EscrowWithdrawnEvent {
-            escrow_id: escrow.escrow_id,
-            secret,
-            withdrawer: signer::address_of(withdrawer),
+        event::emit_event(&mut escrow.funds_distributed_events, FundsDistributedEvent {
+            caller,
+            after_time_limit: is_after_time_limit,
         });
     }
 
-    public entry fun refund<CoinType>(
-        refunder: &signer,
-        escrow_holder: address,
-    ) acquires Escrow, EscrowEvents {
-        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_holder);
+    // Cancel escrow
+    public fun cancel<CoinType>(
+        caller: address,
+        immutables: Immutables,
+        escrow_addr: address,
+    ) acquires Escrow {
+        let escrow = borrow_global_mut<Escrow<CoinType>>(escrow_addr);
         
-        // Validate refund
-        assert!(escrow.state == STATE_ACTIVE, E_ALREADY_REFUNDED);
-        assert!(signer::address_of(refunder) == escrow.src_address, E_UNAUTHORIZED);
-        assert!(timestamp::now_seconds() >= escrow.timelock, E_NOT_REFUNDABLE);
+        assert!(escrow.state == STATE_ACTIVE, E_INVALID_TIME);
+        verify_immutables(&immutables, escrow);
         
-        // Update state
-        escrow.state = STATE_REFUNDED;
+        let current_time = timestamp::now_seconds();
+        let deployed_at = get_deployed_at(escrow.timelocks);
         
-        // Transfer coins back to source
-        let coins = coin::withdraw<CoinType>(&escrow_holder, escrow.src_amount);
-        coin::deposit(escrow.src_address, coins);
+        if (escrow.is_source) {
+            let cancellation_time = deployed_at + get_src_cancellation(escrow.timelocks);
+            let public_cancellation_time = deployed_at + get_src_public_cancellation(escrow.timelocks);
+            
+            assert!(current_time >= cancellation_time, E_INVALID_TIME);
+            if (current_time < public_cancellation_time) {
+                assert!(caller == escrow.maker, E_INVALID_CALLER);
+            };
+        } else {
+            assert!(current_time >= escrow.src_cancellation_timestamp, E_INVALID_TIME);
+            let cancellation_time = deployed_at + get_dst_cancellation(escrow.timelocks);
+            assert!(current_time >= cancellation_time, E_INVALID_TIME);
+        };
         
-        // Emit event
-        let events = borrow_global_mut<EscrowEvents>(@unite_resolver);
-        event::emit_event(&mut events.escrow_refunded_events, EscrowRefundedEvent {
-            escrow_id: escrow.escrow_id,
-            refunder: signer::address_of(refunder),
+        escrow.state = STATE_CANCELLED;
+        
+        // Return coins to maker
+        let coin_balance = coin::extract_all(&mut escrow.coin_store);
+        if (coin::value(&coin_balance) > 0) {
+            aptos_account::deposit_coins(escrow.maker, coin_balance);
+        } else {
+            coin::destroy_zero(coin_balance);
+        };
+        
+        // Return safety deposits to resolvers would be handled by external calls
+        
+        event::emit_event(&mut escrow.cancelled_events, CancelledEvent {
+            maker: escrow.maker,
+            amount: escrow.amount,
         });
+    }
+
+    // Helper functions
+    fun verify_immutables<CoinType>(immutables: &Immutables, escrow: &Escrow<CoinType>) {
+        assert!(immutables.order_hash == escrow.order_hash, E_INVALID_IMMUTABLES);
+        assert!(immutables.hashlock == escrow.hashlock, E_INVALID_IMMUTABLES);
+        assert!(immutables.maker == escrow.maker, E_INVALID_IMMUTABLES);
+        assert!(immutables.taker == escrow.taker, E_INVALID_IMMUTABLES);
+        assert!(immutables.amount == escrow.amount, E_INVALID_IMMUTABLES);
+        assert!(immutables.safety_deposit == escrow.safety_deposit, E_INVALID_IMMUTABLES);
+    }
+
+    fun is_resolver<CoinType>(escrow: &Escrow<CoinType>, addr: address): bool {
+        table::contains(&escrow.resolver_info, addr)
+    }
+
+    fun calculate_total_safety_deposits<CoinType>(escrow: &Escrow<CoinType>): u64 {
+        let total = 0;
+        let i = 0;
+        let len = vector::length(&escrow.resolvers);
+        while (i < len) {
+            let resolver = *vector::borrow(&escrow.resolvers, i);
+            let safety_deposit = *table::borrow(&escrow.safety_deposits, resolver);
+            total = total + safety_deposit;
+            i = i + 1;
+        };
+        total
+    }
+
+    fun distribute_source_funds<CoinType>(
+        escrow: &mut Escrow<CoinType>,
+_caller_reward: u64,
+        _caller: address,
+    ) {
+        // For source: distribute tokens to resolvers proportionally
+        let total_coins = coin::extract_all(&mut escrow.coin_store);
+        let total_coin_value = coin::value(&total_coins);
+        
+        let i = 0;
+        let len = vector::length(&escrow.resolvers);
+        while (i < len) {
+            let resolver = *vector::borrow(&escrow.resolvers, i);
+            let resolver_info = table::borrow(&escrow.resolver_info, resolver);
+            
+            // Calculate proportional amount
+            let resolver_coins = if (i == len - 1) {
+                // Last resolver gets remaining to handle rounding
+                coin::extract_all(&mut total_coins)
+            } else {
+                let resolver_amount = (total_coin_value * resolver_info.partial_amount) / escrow.total_partial_amount;
+                coin::extract(&mut total_coins, resolver_amount)
+            };
+            
+            aptos_account::deposit_coins(resolver, resolver_coins);
+            
+            event::emit_event(&mut escrow.withdrawn_events, WithdrawnEvent {
+                recipient: resolver,
+                amount: resolver_info.partial_amount,
+            });
+            
+            i = i + 1;
+        };
+        
+        // Destroy any remaining zero coin
+        if (coin::value(&total_coins) == 0) {
+            coin::destroy_zero(total_coins);
+        } else {
+            // This shouldn't happen, but safety check
+            aptos_account::deposit_coins(escrow.maker, total_coins);
+        };
+    }
+
+    fun distribute_destination_funds<CoinType>(
+        escrow: &mut Escrow<CoinType>,
+_caller_reward: u64,
+        _caller: address,
+    ) {
+        // For destination: send all tokens to maker (user)
+        let all_coins = coin::extract_all(&mut escrow.coin_store);
+        aptos_account::deposit_coins(escrow.maker, all_coins);
+        
+        event::emit_event(&mut escrow.withdrawn_events, WithdrawnEvent {
+            recipient: escrow.maker,
+            amount: escrow.total_partial_amount,
+        });
+    }
+
+    // Timelock utility functions
+    fun set_deployed_at(timelocks: u64, timestamp: u64): u64 {
+        let mask = 0xFFFFFFFF;
+        let offset = 224;
+        let shifted_mask = mask << offset;
+        let inverted_mask = 0xFFFFFFFFFFFFFFFF - shifted_mask;
+        (timelocks & inverted_mask) | (timestamp << offset)
+    }
+
+    fun get_deployed_at(timelocks: u64): u64 {
+        (timelocks >> 224) & 0xFFFFFFFF
+    }
+
+    fun get_src_withdrawal(timelocks: u64): u64 {
+        timelocks & 0xFFFFFFFF
+    }
+
+    fun get_src_public_withdrawal(timelocks: u64): u64 {
+        (timelocks >> 32) & 0xFFFFFFFF
+    }
+
+    fun get_src_cancellation(timelocks: u64): u64 {
+        (timelocks >> 64) & 0xFFFFFFFF
+    }
+
+    fun get_src_public_cancellation(timelocks: u64): u64 {
+        (timelocks >> 96) & 0xFFFFFFFF
+    }
+
+    fun get_dst_withdrawal(timelocks: u64): u64 {
+        (timelocks >> 128) & 0xFFFFFFFF
+    }
+
+    fun get_dst_public_withdrawal(timelocks: u64): u64 {
+        (timelocks >> 160) & 0xFFFFFFFF
+    }
+
+    fun get_dst_cancellation(timelocks: u64): u64 {
+        (timelocks >> 192) & 0xFFFFFFFF
+    }
+
+    // View functions
+    #[view]
+    public fun get_escrow_info<CoinType>(escrow_addr: address): (u8, u64, bool, bool) acquires Escrow {
+        let escrow = borrow_global<Escrow<CoinType>>(escrow_addr);
+        (escrow.state, escrow.total_partial_amount, escrow.funds_distributed, escrow.user_funded)
     }
 
     #[view]
-    public fun get_escrow_details<CoinType>(escrow_holder: address): (address, address, u64, vector<u8>, u64, u8) acquires Escrow {
-        let escrow = borrow_global<Escrow<CoinType>>(escrow_holder);
-        (
-            escrow.src_address,
-            escrow.dst_address,
-            escrow.src_amount,
-            escrow.hashlock,
-            escrow.timelock,
-            escrow.state
-        )
+    public fun get_resolver_info<CoinType>(escrow_addr: address, resolver: address): (u64, u64, bool) acquires Escrow {
+        let escrow = borrow_global<Escrow<CoinType>>(escrow_addr);
+        if (table::contains(&escrow.resolver_info, resolver)) {
+            let info = table::borrow(&escrow.resolver_info, resolver);
+            (info.partial_amount, info.safety_deposit, info.withdrawn)
+        } else {
+            (0, 0, false)
+        }
+    }
+
+    #[view]
+    public fun get_coin_balance<CoinType>(escrow_addr: address): u64 acquires Escrow {
+        let escrow = borrow_global<Escrow<CoinType>>(escrow_addr);
+        coin::value(&escrow.coin_store)
+    }
+
+    #[view]
+    public fun get_resolvers<CoinType>(escrow_addr: address): vector<address> acquires Escrow {
+        let escrow = borrow_global<Escrow<CoinType>>(escrow_addr);
+        escrow.resolvers
+    }
+
+    // Getter functions for Immutables fields
+    public fun get_order_hash(immutables: &Immutables): vector<u8> {
+        immutables.order_hash
+    }
+
+    public fun get_amount(immutables: &Immutables): u64 {
+        immutables.amount
+    }
+
+    public fun get_safety_deposit(immutables: &Immutables): u64 {
+        immutables.safety_deposit
+    }
+
+    public fun get_maker(immutables: &Immutables): address {
+        immutables.maker
+    }
+
+    public fun get_taker(immutables: &Immutables): address {
+        immutables.taker
+    }
+
+    public fun get_hashlock(immutables: &Immutables): vector<u8> {
+        immutables.hashlock
+    }
+
+    public fun get_token(immutables: &Immutables): address {
+        immutables.token
+    }
+
+    public fun get_timelocks(immutables: &Immutables): u64 {
+        immutables.timelocks
     }
 }
