@@ -13,7 +13,7 @@
     "verify-deployment": "npx ts-node scripts/verify-deployment.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:crosschain": "vitest run tests/crosschain.test.ts",
+    "test:crosschain": "npx vitest run tests/aptos-evm-crosschain.test.ts --reporter=verbose",
     "test:unit": "vitest run tests/unit.test.ts",
     "example:swap": "npx ts-node examples/simple-swap.ts",
     "example:monitoring": "npx ts-node examples/monitoring.ts",
