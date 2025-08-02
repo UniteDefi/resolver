@@ -1,0 +1,30 @@
+[package]
+name = "unite-escrow"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Unite HTLC Escrow contract with timelock and safety deposits"
+repository.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+library = []
+backtraces = ["cosmwasm-std/backtraces"]
+schema = ["cosmwasm-std/schema"]
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-storage = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw2 = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+cw-multi-test = "0.18"
