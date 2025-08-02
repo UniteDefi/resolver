@@ -1,183 +1,270 @@
-export const TEST_CHAINS = {
-  APTOS_TESTNET: {
-    id: 2,
-    name: "Aptos Testnet",
-    rpc: "https://fullnode.testnet.aptoslabs.com",
-    faucet: "https://faucet.testnet.aptoslabs.com",
-  },
-  ETHEREUM_SEPOLIA: {
-    id: 11155111,
-    name: "Ethereum Sepolia",
-    rpc: "https://eth-sepolia.g.alchemy.com/v2/demo",
-  },
-  POLYGON_MUMBAI: {
-    id: 80001,
-    name: "Polygon Mumbai",
-    rpc: "https://rpc-mumbai.maticvigil.com",
-  },
-  BSC_TESTNET: {
-    id: 97,
-    name: "BSC Testnet",
-    rpc: "https://data-seed-prebsc-1-s1.binance.org:8545",
-  },
-};
+import { randomBytes } from "crypto";
+import { solidityPackedKeccak256, hexlify, parseUnits } from "ethers";
+import { encodeTimelocks, type Immutables } from "./aptos-helpers";
+import { encodeEvmTimelocks, type EVMImmutables, type Order } from "./evm-helpers";
 
-export const TEST_TOKENS = {
-  APTOS: {
-    APT: "0x1::aptos_coin::AptosCoin",
-    USDT: "test_coin::USDT",
-    DAI: "test_coin::DAI",
-  },
-  EVM: {
-    ETH: "0x0000000000000000000000000000000000000000",
-    USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-    WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-  },
-};
-
-export const TEST_AMOUNTS = {
-  SMALL: BigInt("1000000"), // 1 token with 6 decimals
-  MEDIUM: BigInt("1000000000"), // 1000 tokens with 6 decimals
-  LARGE: BigInt("1000000000000"), // 1M tokens with 6 decimals
-};
-
-export const TEST_SECRETS = {
-  SECRET_1: Buffer.from("test_secret_1_for_htlc_swap_demo", "utf8"),
-  SECRET_2: Buffer.from("another_secret_for_testing_htlc2", "utf8"),
-  SECRET_3: Buffer.from("third_secret_used_in_integration", "utf8"),
-};
-
-export const TEST_TIMELOCKS = {
-  ONE_HOUR: 3600,
-  ONE_DAY: 86400,
-  ONE_WEEK: 604800,
-};
-
-export function generateTestEscrowId(): Uint8Array {
-  const id = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    id[i] = Math.floor(Math.random() * 256);
-  }
-  return id;
+export interface TestScenario {
+  name: string;
+  description: string;
+  sourceChain: "base_sepolia" | "arb_sepolia" | "aptos";
+  destinationChain: "base_sepolia" | "arb_sepolia" | "aptos";
+  sourceToken: string;
+  destinationToken: string;
+  amount: string;
+  expectedAmount: string;
+  safetyDepositRate: number; // percentage
 }
 
-export function generateTestHashlock(secret: Uint8Array): Uint8Array {
-  const crypto = require("crypto");
-  return crypto.createHash("sha256").update(secret).digest();
+export interface CrossChainTestData {
+  secret: Uint8Array;
+  hashlock: string;
+  orderHash: string;
+  timelocks: {
+    srcWithdrawal: number;
+    srcPublicWithdrawal: number;
+    srcCancellation: number;
+    srcPublicCancellation: number;
+    dstWithdrawal: number;
+    dstPublicWithdrawal: number;
+    dstCancellation: number;
+  };
+  resolverCommitments: {
+    resolver1: string;
+    resolver2: string;
+    resolver3: string;
+  };
 }
 
-export function getCurrentTimestamp(): number {
-  return Math.floor(Date.now() / 1000);
+export const TEST_SCENARIOS: TestScenario[] = [
+  {
+    name: "Base Sepolia to Aptos USDT→DAI",
+    description: "Swap 100 USDT on Base Sepolia for 99 DAI on Aptos",
+    sourceChain: "base_sepolia",
+    destinationChain: "aptos",
+    sourceToken: "USDT",
+    destinationToken: "DAI",
+    amount: "100",
+    expectedAmount: "99",
+    safetyDepositRate: 0.1,
+  },
+  {
+    name: "Aptos to Base Sepolia DAI→USDT",
+    description: "Swap 100 DAI on Aptos for 101 USDT on Base Sepolia",
+    sourceChain: "aptos",
+    destinationChain: "base_sepolia",
+    sourceToken: "DAI",
+    destinationToken: "USDT",
+    amount: "100",
+    expectedAmount: "101",
+    safetyDepositRate: 0.1,
+  },
+  {
+    name: "Arbitrum to Aptos USDT→DAI",
+    description: "Swap 50 USDT on Arbitrum Sepolia for 49.5 DAI on Aptos",
+    sourceChain: "arb_sepolia",
+    destinationChain: "aptos",
+    sourceToken: "USDT",
+    destinationToken: "DAI",
+    amount: "50",
+    expectedAmount: "49.5",
+    safetyDepositRate: 0.1,
+  },
+];
+
+export function generateTestSecret(): { secret: Uint8Array; hashlock: string } {
+  const secret = randomBytes(32);
+  const hashlock = solidityPackedKeccak256(["bytes32"], [secret]);
+  return { secret, hashlock };
 }
 
-export function getFutureTimestamp(seconds: number): number {
-  return getCurrentTimestamp() + seconds;
+export function generateTestOrderHash(): string {
+  return solidityPackedKeccak256(
+    ["uint256", "address", "uint256", "uint256"],
+    [Date.now(), "0x1234567890123456789012345678901234567890", Date.now(), 12345]
+  );
 }
 
-export interface TestOrder {
-  maker: string;
-  taker: string;
-  makerAsset: string;
-  takerAsset: string;
-  makerAmount: bigint;
-  takerAmount: bigint;
-  salt: bigint;
-  expiry: number;
+export function getStandardTimelocks() {
+  return {
+    srcWithdrawal: 0,           // Immediate withdrawal with secret
+    srcPublicWithdrawal: 900,   // 15 min for public reward incentive
+    srcCancellation: 1800,      // 30 min for cancellation
+    srcPublicCancellation: 3600, // 1 hour for public cancellation
+    dstWithdrawal: 0,           // Immediate withdrawal with secret
+    dstPublicWithdrawal: 900,   // 15 min for public reward incentive
+    dstCancellation: 2700       // 45 min for destination cancellation
+  };
+}
+
+export function createTestData(scenario: TestScenario): CrossChainTestData {
+  const { secret, hashlock } = generateTestSecret();
+  const orderHash = generateTestOrderHash();
+  const timelocks = getStandardTimelocks();
+  
+  // Calculate resolver commitments (split the amount proportionally)
+  const totalAmount = parseFloat(scenario.amount);
+  const resolverCommitments = {
+    resolver1: (totalAmount * 0.4).toString(), // 40%
+    resolver2: (totalAmount * 0.35).toString(), // 35%
+    resolver3: (totalAmount * 0.25).toString(), // 25%
+  };
+
+  return {
+    secret,
+    hashlock,
+    orderHash,
+    timelocks,
+    resolverCommitments,
+  };
+}
+
+export function createAptosImmutables(
+  testData: CrossChainTestData,
+  scenario: TestScenario,
+  maker: string,
+  packageAddress: string
+): Immutables {
+  const orderHashBytes = Array.from(Buffer.from(testData.orderHash.slice(2), 'hex'));
+  const hashlockBytes = Array.from(Buffer.from(testData.hashlock.slice(2), 'hex'));
+  
+  // Get token decimals
+  const decimals = scenario.sourceToken === "USDT" ? 6 : 18;
+  const amount = parseUnits(scenario.amount, decimals).toString();
+  const safetyDeposit = parseUnits((parseFloat(scenario.amount) * scenario.safetyDepositRate / 100).toString(), 18).toString();
+  
+  const timelocks = encodeTimelocks(testData.timelocks);
+
+  return {
+    order_hash: orderHashBytes,
+    hashlock: hashlockBytes,
+    maker,
+    taker: "0x0",
+    token: packageAddress,
+    amount: { value: BigInt(amount) } as any,
+    safety_deposit: { value: BigInt(safetyDeposit) } as any,
+    timelocks: { value: BigInt(timelocks) } as any,
+  };
+}
+
+export function createEvmImmutables(
+  testData: CrossChainTestData,
+  scenario: TestScenario,
+  maker: string,
+  tokenAddress: string
+): EVMImmutables {
+  // Get token decimals
+  const decimals = scenario.sourceToken === "USDT" ? 6 : 18;
+  const amount = parseUnits(scenario.amount, decimals);
+  const safetyDeposit = parseUnits((parseFloat(scenario.amount) * scenario.safetyDepositRate / 100).toString(), 18);
+  
+  const timelocks = encodeEvmTimelocks({
+    srcWithdrawal: BigInt(testData.timelocks.srcWithdrawal),
+    srcPublicWithdrawal: BigInt(testData.timelocks.srcPublicWithdrawal),
+    srcCancellation: BigInt(testData.timelocks.srcCancellation),
+    srcPublicCancellation: BigInt(testData.timelocks.srcPublicCancellation),
+    dstWithdrawal: BigInt(testData.timelocks.dstWithdrawal),
+    dstPublicWithdrawal: BigInt(testData.timelocks.dstPublicWithdrawal),
+    dstCancellation: BigInt(testData.timelocks.dstCancellation),
+  });
+
+  return {
+    orderHash: testData.orderHash,
+    hashlock: testData.hashlock,
+    maker: BigInt(maker),
+    taker: 0n,
+    token: BigInt(tokenAddress),
+    amount,
+    safetyDeposit,
+    timelocks,
+  };
 }
 
 export function createTestOrder(
+  testData: CrossChainTestData,
+  scenario: TestScenario,
   maker: string,
-  taker: string = "0x0",
-  makerAsset: string = TEST_TOKENS.APTOS.APT,
-  takerAsset: string = TEST_TOKENS.APTOS.USDT,
-  makerAmount: bigint = TEST_AMOUNTS.MEDIUM,
-  takerAmount: bigint = TEST_AMOUNTS.MEDIUM
-): TestOrder {
-  return {
-    maker,
-    taker,
-    makerAsset,
-    takerAsset,
-    makerAmount,
-    takerAmount,
-    salt: BigInt(Date.now()),
-    expiry: getFutureTimestamp(TEST_TIMELOCKS.ONE_DAY),
-  };
-}
-
-export interface TestEscrow {
-  srcAddress: string;
-  dstAddress: string;
-  srcToken: string;
-  srcAmount: bigint;
-  dstChainId: number;
-  dstToken: string;
-  dstAmount: bigint;
-  hashlock: Uint8Array;
-  timelock: number;
-  escrowId: Uint8Array;
-}
-
-export function createTestEscrow(
-  srcAddress: string,
-  dstAddress: string,
-  srcChainId: number = TEST_CHAINS.APTOS_TESTNET.id,
-  dstChainId: number = TEST_CHAINS.ETHEREUM_SEPOLIA.id
-): TestEscrow {
-  const secret = TEST_SECRETS.SECRET_1;
-  const hashlock = generateTestHashlock(secret);
+  makerAsset: string,
+  takerAsset: string,
+  srcChainId: number,
+  dstChainId: number,
+  nonce: bigint = 0n
+): Order {
+  const now = Math.floor(Date.now() / 1000);
+  const sourceDecimals = scenario.sourceToken === "USDT" ? 6 : 18;
+  const destDecimals = scenario.destinationToken === "USDT" ? 6 : 18;
   
   return {
-    srcAddress,
-    dstAddress,
-    srcToken: TEST_TOKENS.APTOS.APT,
-    srcAmount: TEST_AMOUNTS.MEDIUM,
+    salt: 12345n,
+    maker,
+    receiver: "0x0000000000000000000000000000000000000000",
+    makerAsset,
+    takerAsset,
+    makingAmount: parseUnits(scenario.amount, sourceDecimals),
+    takingAmount: parseUnits(scenario.expectedAmount, destDecimals),
+    deadline: now + 3600,
+    nonce,
+    srcChainId,
     dstChainId,
-    dstToken: TEST_TOKENS.EVM.USDT,
-    dstAmount: TEST_AMOUNTS.MEDIUM,
-    hashlock,
-    timelock: getFutureTimestamp(TEST_TIMELOCKS.ONE_HOUR),
-    escrowId: generateTestEscrowId(),
+    auctionStartTime: now,
+    auctionEndTime: now + 300,
+    startPrice: parseUnits("0.99", 18),
+    endPrice: parseUnits("0.97", 18),
   };
 }
 
-export const RESOLVER_CONFIGS = {
-  LOW_FEE: {
-    name: "LowFeeResolver",
-    feeBps: 10, // 0.1%
-  },
-  STANDARD_FEE: {
-    name: "StandardResolver",
-    feeBps: 50, // 0.5%
-  },
-  HIGH_FEE: {
-    name: "PremiumResolver",
-    feeBps: 100, // 1%
-  },
-};
+export const CHAIN_IDS = {
+  base_sepolia: 84532,
+  arb_sepolia: 421614,
+  eth_sepolia: 11155111,
+  aptos_devnet: 3,
+  aptos_testnet: 2,
+  aptos_mainnet: 1,
+} as const;
 
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export const TOKEN_DECIMALS = {
+  USDT: 6,
+  DAI: 18,
+  ETH: 18,
+  APT: 8,
+} as const;
+
+export function formatTestAmount(amount: string, token: keyof typeof TOKEN_DECIMALS): string {
+  const decimals = TOKEN_DECIMALS[token];
+  return parseUnits(amount, decimals).toString();
 }
 
-export function formatAddress(address: string, length: number = 6): string {
-  return `${address.slice(0, length)}...${address.slice(-4)}`;
-}
-
-export function hexToBytes(hex: string): Uint8Array {
-  if (hex.startsWith("0x")) {
-    hex = hex.slice(2);
+export function parseTestAmount(amount: string, token: keyof typeof TOKEN_DECIMALS): string {
+  const decimals = TOKEN_DECIMALS[token];
+  const num = BigInt(amount);
+  const divisor = BigInt(10 ** decimals);
+  const wholePart = num / divisor;
+  const fractionalPart = num % divisor;
+  
+  if (fractionalPart === 0n) {
+    return wholePart.toString();
   }
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-  }
-  return bytes;
+  
+  const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+  return `${wholePart}.${fractionalStr}`.replace(/\.?0+$/, '');
 }
 
-export function bytesToHex(bytes: Uint8Array): string {
-  return "0x" + Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+export function logTestProgress(step: string, details?: string): void {
+  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  console.log(`[${timestamp}] ${step}${details ? `: ${details}` : ''}`);
+}
+
+export function validateTestScenario(scenario: TestScenario): boolean {
+  const validChains = ["base_sepolia", "arb_sepolia", "aptos"];
+  const validTokens = ["USDT", "DAI"];
+  
+  return (
+    validChains.includes(scenario.sourceChain) &&
+    validChains.includes(scenario.destinationChain) &&
+    validTokens.includes(scenario.sourceToken) &&
+    validTokens.includes(scenario.destinationToken) &&
+    scenario.sourceChain !== scenario.destinationChain &&
+    parseFloat(scenario.amount) > 0 &&
+    parseFloat(scenario.expectedAmount) > 0 &&
+    scenario.safetyDepositRate >= 0 && scenario.safetyDepositRate <= 100
+  );
 }
