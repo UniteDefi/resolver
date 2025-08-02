@@ -1,0 +1,13 @@
+{
+  "scripts_to_add": {
+    "deploy:ton": "npm run blueprint run deployContracts",
+    "test:factory": "npm run blueprint run testFactory",
+    "check:balance": "npm run blueprint run checkBalance", 
+    "fund:accounts": "npm run blueprint run fundAccounts",
+    "test:crosschain": "npm test tests/crosschain.spec.ts",
+    "compile:all": "npm run blueprint build",
+    "deploy:local": "npm run blueprint run deployContracts --network local",
+    "deploy:testnet": "npm run blueprint run deployContracts --network testnet"
+  },
+  "note": "Add these scripts to your package.json manually"
+}
