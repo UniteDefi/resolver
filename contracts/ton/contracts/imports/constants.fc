@@ -1,0 +1,23 @@
+;; Constants for Unite Protocol
+
+const int STATE_ACTIVE = 0;
+const int STATE_WITHDRAWN = 1;
+const int STATE_CANCELLED = 2;
+
+const int OP_INITIALIZE = 1;
+const int OP_INITIALIZE_DST = 2;
+const int OP_ADD_RESOLVER = 3;
+const int OP_WITHDRAW_WITH_SECRET = 4;
+const int OP_CANCEL = 5;
+const int OP_DEPOSIT_JETTONS = 6;
+
+const int ERROR_INVALID_STATE = 100;
+const int ERROR_INVALID_SECRET = 101;
+const int ERROR_INVALID_TIME = 102;
+const int ERROR_INSUFFICIENT_FUNDS = 103;
+const int ERROR_ALREADY_WITHDRAWN = 104;
+const int ERROR_RESOLVER_EXISTS = 105;
+const int ERROR_UNAUTHORIZED = 401;
+const int ERROR_ESCROW_EXISTS = 402;
+const int ERROR_INVALID_AMOUNT = 404;
+const int ERROR_INSUFFICIENT_DEPOSIT = 405;
