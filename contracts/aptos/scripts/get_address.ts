@@ -1,16 +1,36 @@
-import { Account, Ed25519PrivateKey } from "@aptos-labs/ts-sdk";
-import dotenv from "dotenv";
+import { AptosAccount } from "aptos";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const privateKey = process.env.APTOS_PRIVATE_KEY;
-if (!privateKey) {
-  console.error("APTOS_PRIVATE_KEY not found");
-  process.exit(1);
+function getAccountAddress() {
+  const privateKeyHex = process.env.APTOS_PRIVATE_KEY;
+  
+  if (!privateKeyHex) {
+    console.error("[GetAddress] No private key found in environment");
+    console.log("[GetAddress] Set APTOS_PRIVATE_KEY in your .env file");
+    process.exit(1);
+  }
+
+  try {
+    const privateKey = Uint8Array.from(Buffer.from(privateKeyHex, "hex"));
+    const account = new AptosAccount(privateKey);
+    
+    console.log("[GetAddress] Account Information:");
+    console.log("  Address:", account.address().hex());
+    console.log("  Public Key:", account.pubKey().hex());
+    
+    // Also display in different formats
+    console.log("\n[GetAddress] Address formats:");
+    console.log("  Hex:", account.address().hex());
+    console.log("  With 0x:", `0x${account.address().hex()}`);
+    console.log("  Short:", `0x${account.address().hex().slice(0, 6)}...${account.address().hex().slice(-4)}`);
+    
+  } catch (error) {
+    console.error("[GetAddress] Invalid private key:", error.message);
+    process.exit(1);
+  }
 }
 
-const account = Account.fromPrivateKey({
-  privateKey: new Ed25519PrivateKey(privateKey),
-});
-
-console.log(account.accountAddress.toString());
+// Run the script
+getAccountAddress();

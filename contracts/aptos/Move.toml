@@ -1,10 +1,15 @@
 [package]
-name = "counter"
+name = "unite-aptos"
 version = "1.0.0"
-authors = []
+authors = ["Unite DeFi Team"]
 
 [addresses]
-counter_addr = "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c"
+unite_resolver = "_"
+aptos_framework = "0x1"
+aptos_std = "0x1"
+aptos_token = "0x3"
 
 [dependencies]
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework", rev = "mainnet" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib", rev = "mainnet" }
+AptosToken = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-token", rev = "mainnet" }

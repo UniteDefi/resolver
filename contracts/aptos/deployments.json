@@ -1,0 +1,13 @@
+{
+  "network": "testnet",
+  "deployer": "",
+  "modules": {
+    "escrow": "",
+    "escrowFactory": "",
+    "limitOrderProtocol": "",
+    "resolver": "",
+    "testCoinUSDT": "",
+    "testCoinDAI": ""
+  },
+  "timestamp": ""
+}
