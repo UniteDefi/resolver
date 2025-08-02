@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  osmosis-node:
+    image: osmolabs/osmosis:latest
+    container_name: osmosis-local
+    ports:
+      - "26657:26657"
+      - "26656:26656"
+      - "1317:1317"
+      - "9090:9090"
+    volumes:
+      - osmosis_data:/root/.osmosisd
+    command: >
+      sh -c "osmosisd init test --chain-id=localosmosis &&
+             osmosisd keys add validator --keyring-backend=test &&
+             osmosisd add-genesis-account validator 1000000000000uosmo --keyring-backend=test &&
+             osmosisd gentx validator 500000000uosmo --chain-id=localosmosis --keyring-backend=test &&
+             osmosisd collect-gentxs &&
+             osmosisd start"
+    environment:
+      - DAEMON_NAME=osmosisd
+      - DAEMON_HOME=/root/.osmosisd
+    networks:
+      - osmosis-network
+
+  cosmwasm-optimizer:
+    image: cosmwasm/rust-optimizer:0.12.13
+    container_name: cosmwasm-optimizer
+    volumes:
+      - ./contracts:/code
+      - optimizer_cache:/code/target
+      - registry_cache:/usr/local/cargo/registry
+    working_dir: /code
+    command: tail -f /dev/null
+    networks:
+      - osmosis-network
+
+volumes:
+  osmosis_data:
+  optimizer_cache:
+  registry_cache:
+
+networks:
+  osmosis-network:
+    driver: bridge
