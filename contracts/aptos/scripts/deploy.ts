@@ -1,201 +1,311 @@
-import { AptosClient, AptosAccount, FaucetClient, TxnBuilderTypes, BCS } from "aptos";
+import {
+  Account,
+  Aptos,
+  AptosConfig,
+  Network,
+  Ed25519PrivateKey,
+  MoveString,
+  MoveVector,
+  U64,
+  U8,
+} from "@aptos-labs/ts-sdk";
 import * as fs from "fs";
 import * as path from "path";
-import * as dotenv from "dotenv";
+import { execSync } from "child_process";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const NODE_URL = process.env.APTOS_NODE_URL || "https://fullnode.testnet.aptoslabs.com";
-const FAUCET_URL = process.env.APTOS_FAUCET_URL || "https://faucet.testnet.aptoslabs.com";
-
-interface DeploymentInfo {
-  network: string;
-  deployer: string;
-  modules: {
-    escrow: string;
-    escrowFactory: string;
-    limitOrderProtocol: string;
-    resolver: string;
-    testCoinUSDT: string;
-    testCoinDAI: string;
-  };
-  timestamp: string;
+interface DeploymentAddresses {
+  packageAddress: string;
+  limitOrderProtocol: string;
+  escrowFactory: string;
+  resolver0: string;
+  resolver1: string;
+  resolver2: string;
+  resolver3: string;
+  testUSDT: string;
+  testDAI: string;
 }
 
-async function deployContracts() {
-  console.log("[Deploy] Starting deployment process...");
+async function deployUniteProtocol(): Promise<DeploymentAddresses> {
+  console.log("[Deploy] Starting Aptos Unite Protocol deployment...");
 
-  // Initialize clients
-  const client = new AptosClient(NODE_URL);
-  const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
+  // Configuration
+  const network = (process.env.APTOS_NETWORK as Network) || Network.DEVNET;
+  const config = new AptosConfig({ network });
+  const aptos = new Aptos(config);
 
-  // Create or load deployer account
-  let account: AptosAccount;
-  const privateKeyHex = process.env.APTOS_PRIVATE_KEY;
+  // Account setup
+  let deployer: Account;
+  const privateKey = process.env.APTOS_PRIVATE_KEY;
   
-  if (privateKeyHex) {
-    const privateKey = Uint8Array.from(Buffer.from(privateKeyHex, "hex"));
-    account = new AptosAccount(privateKey);
-    console.log("[Deploy] Using existing account:", account.address().hex());
-  } else {
-    account = new AptosAccount();
-    console.log("[Deploy] Created new account:", account.address().hex());
-    console.log("[Deploy] Private key:", Buffer.from(account.signingKey.secretKey).toString("hex"));
-    
-    // Fund the account
-    console.log("[Deploy] Funding account...");
-    await faucetClient.fundAccount(account.address(), 100_000_000);
+  if (!privateKey) {
+    throw new Error("APTOS_PRIVATE_KEY not found in environment variables");
   }
 
-  // Check balance
-  const resources = await client.getAccountResources(account.address());
-  const accountResource = resources.find((r) => r.type === "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>");
-  console.log("[Deploy] Account balance:", accountResource?.data.coin.value);
+  deployer = Account.fromPrivateKey({
+    privateKey: new Ed25519PrivateKey(privateKey),
+  });
 
-  // Compile the package
-  console.log("[Deploy] Compiling Move package...");
-  const packagePath = path.join(__dirname, "..");
-  const compiledModules = await compilePackage(packagePath);
+  console.log("[Deploy] Deployer address:", deployer.accountAddress.toString());
 
-  // Deploy modules
-  console.log("[Deploy] Deploying modules...");
-  const txnHash = await publishPackage(client, account, compiledModules, []);
-  
-  console.log("[Deploy] Transaction hash:", txnHash);
-  console.log("[Deploy] Waiting for transaction...");
-  
-  await client.waitForTransaction(txnHash);
-  console.log("[Deploy] Modules deployed successfully!");
-
-  // Initialize modules
-  console.log("[Deploy] Initializing modules...");
-  await initializeModules(client, account);
-
-  // Save deployment info
-  const deploymentInfo: DeploymentInfo = {
-    network: NODE_URL,
-    deployer: account.address().hex(),
-    modules: {
-      escrow: `${account.address().hex()}::escrow`,
-      escrowFactory: `${account.address().hex()}::escrow_factory`,
-      limitOrderProtocol: `${account.address().hex()}::limit_order_protocol`,
-      resolver: `${account.address().hex()}::resolver`,
-      testCoinUSDT: `${account.address().hex()}::test_coin::USDT`,
-      testCoinDAI: `${account.address().hex()}::test_coin::DAI`,
-    },
-    timestamp: new Date().toISOString(),
-  };
-
-  const deploymentPath = path.join(__dirname, "..", "deployments.json");
-  fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
-  console.log("[Deploy] Deployment info saved to:", deploymentPath);
-
-  return deploymentInfo;
-}
-
-async function compilePackage(packagePath: string): Promise<string> {
-  const { execSync } = require("child_process");
-  
+  // Check account balance
   try {
-    execSync(`aptos move compile --package-dir ${packagePath} --save-metadata`, {
+    const balance = await aptos.getAccountResource({
+      accountAddress: deployer.accountAddress,
+      resourceType: "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>",
+    });
+    console.log("[Deploy] Account balance:", (balance as any).coin.value);
+  } catch (error) {
+    console.log("[Deploy] Account might not be initialized yet, funding...");
+    try {
+      await aptos.fundAccount({
+        accountAddress: deployer.accountAddress,
+        amount: 100_000_000, // 1 APT
+      });
+      console.log("[Deploy] Account funded with 1 APT");
+    } catch (fundError) {
+      console.log("[Deploy] Could not fund account, proceeding anyway...");
+    }
+  }
+
+  // Update Move.toml with the actual address
+  const moveTomlPath = path.join(__dirname, "..", "Move.toml");
+  let moveTomlContent = fs.readFileSync(moveTomlPath, "utf8");
+  moveTomlContent = moveTomlContent.replace(
+    'aptos_addr = "_"',
+    `aptos_addr = "${deployer.accountAddress.toString()}"`
+  );
+  fs.writeFileSync(moveTomlPath, moveTomlContent);
+  console.log("[Deploy] Updated Move.toml with deployer address");
+
+  // Compile the module
+  console.log("[Deploy] Compiling Move modules...");
+  try {
+    execSync("aptos move compile", {
+      cwd: path.join(__dirname, ".."),
       stdio: "inherit",
     });
-    
-    // Read compiled bytecode
-    const buildPath = path.join(packagePath, "build", "unite-aptos", "bytecode_modules");
-    const modules = fs.readdirSync(buildPath)
-      .filter(f => f.endsWith(".mv"))
-      .map(f => fs.readFileSync(path.join(buildPath, f)))
-      .map(b => Buffer.from(b).toString("hex"));
-    
-    return modules.join("");
+    console.log("[Deploy] Compilation successful");
   } catch (error) {
     console.error("[Deploy] Compilation failed:", error);
     throw error;
   }
-}
 
-async function publishPackage(
-  client: AptosClient,
-  account: AptosAccount,
-  moduleHex: string,
-  extraArgs: any[]
-): Promise<string> {
-  const payload = {
-    type: "module_bundle_payload",
-    modules: [{ bytecode: `0x${moduleHex}` }],
-  };
+  // Publish the package
+  console.log("[Deploy] Publishing package...");
+  try {
+    const restUrl = network === Network.DEVNET ? 'https://fullnode.devnet.aptoslabs.com' : 
+                   network === Network.TESTNET ? 'https://fullnode.testnet.aptoslabs.com' :
+                   'https://fullnode.mainnet.aptoslabs.com';
+    
+    // Use CLI for publishing
+    const publishCommand = `aptos move publish \
+      --private-key "${privateKey}" \
+      --url "${restUrl}" \
+      --assume-yes`;
+      
+    execSync(publishCommand, {
+      cwd: path.join(__dirname, ".."),
+      stdio: "inherit",
+    });
 
-  const txnRequest = await client.generateTransaction(account.address(), payload);
-  const signedTxn = await client.signTransaction(account, txnRequest);
-  const res = await client.submitTransaction(signedTxn);
-  
-  return res.hash;
-}
+    console.log("[Deploy] Package published successfully!");
+    console.log("[Deploy] Package address:", deployer.accountAddress.toString());
+  } catch (error) {
+    console.error("[Deploy] Package publication failed:", error);
+    throw error;
+  }
 
-async function initializeModules(client: AptosClient, account: AptosAccount) {
-  // Initialize escrow events
-  await executeTransaction(client, account, {
-    function: `${account.address().hex()}::escrow::initialize`,
-    type_arguments: [],
-    arguments: [],
-  });
-
-  // Initialize factory
-  await executeTransaction(client, account, {
-    function: `${account.address().hex()}::escrow_factory::initialize`,
-    type_arguments: [],
-    arguments: [],
-  });
-
-  // Initialize order protocol
-  await executeTransaction(client, account, {
-    function: `${account.address().hex()}::limit_order_protocol::initialize`,
-    type_arguments: [],
-    arguments: [],
-  });
-
-  // Initialize resolver registry
-  await executeTransaction(client, account, {
-    function: `${account.address().hex()}::resolver::initialize`,
-    type_arguments: [],
-    arguments: [],
-  });
+  const packageAddress = deployer.accountAddress.toString();
 
   // Initialize test coins
-  await executeTransaction(client, account, {
-    function: `${account.address().hex()}::test_coin::initialize_usdt`,
-    type_arguments: [],
-    arguments: [],
+  console.log("[Deploy] Initializing test coins...");
+  
+  // Initialize USDT
+  const initUSDTTxn = await aptos.transaction.build.simple({
+    sender: deployer.accountAddress,
+    data: {
+      function: `${packageAddress}::test_coin::initialize_usdt`,
+      functionArguments: [],
+    },
   });
 
-  await executeTransaction(client, account, {
-    function: `${account.address().hex()}::test_coin::initialize_dai`,
-    type_arguments: [],
-    arguments: [],
+  const usdtResult = await aptos.signAndSubmitTransaction({
+    signer: deployer,
+    transaction: initUSDTTxn,
   });
 
-  console.log("[Deploy] All modules initialized!");
+  await aptos.waitForTransaction({
+    transactionHash: usdtResult.hash,
+  });
+
+  console.log("[Deploy] Test USDT initialized");
+
+  // Initialize DAI
+  const initDAITxn = await aptos.transaction.build.simple({
+    sender: deployer.accountAddress,
+    data: {
+      function: `${packageAddress}::test_coin::initialize_dai`,
+      functionArguments: [],
+    },
+  });
+
+  const daiResult = await aptos.signAndSubmitTransaction({
+    signer: deployer,
+    transaction: initDAITxn,
+  });
+
+  await aptos.waitForTransaction({
+    transactionHash: daiResult.hash,
+  });
+
+  console.log("[Deploy] Test DAI initialized");
+
+  // Initialize Limit Order Protocol
+  console.log("[Deploy] Initializing Limit Order Protocol...");
+  
+  const initLOPTxn = await aptos.transaction.build.simple({
+    sender: deployer.accountAddress,
+    data: {
+      function: `${packageAddress}::limit_order_protocol::initialize`,
+      functionArguments: [],
+    },
+  });
+
+  const lopResult = await aptos.signAndSubmitTransaction({
+    signer: deployer,
+    transaction: initLOPTxn,
+  });
+
+  await aptos.waitForTransaction({
+    transactionHash: lopResult.hash,
+  });
+
+  console.log("[Deploy] Limit Order Protocol initialized");
+
+  // Initialize Escrow Factory
+  console.log("[Deploy] Initializing Escrow Factory...");
+  
+  const initFactoryTxn = await aptos.transaction.build.simple({
+    sender: deployer.accountAddress,
+    data: {
+      function: `${packageAddress}::escrow_factory::initialize`,
+      functionArguments: [],
+    },
+  });
+
+  const factoryResult = await aptos.signAndSubmitTransaction({
+    signer: deployer,
+    transaction: initFactoryTxn,
+  });
+
+  await aptos.waitForTransaction({
+    transactionHash: factoryResult.hash,
+  });
+
+  console.log("[Deploy] Escrow Factory initialized");
+
+  // Create resolver accounts
+  console.log("[Deploy] Creating resolver accounts...");
+  
+  const resolvers = [];
+  for (let i = 0; i < 4; i++) {
+    const resolver = Account.generate();
+    
+    // Fund resolver account
+    try {
+      await aptos.fundAccount({
+        accountAddress: resolver.accountAddress,
+        amount: 50_000_000, // 0.5 APT
+      });
+    } catch (error) {
+      console.log(`[Deploy] Could not fund resolver ${i}, creating anyway...`);
+    }
+
+    // Initialize resolver
+    const initResolverTxn = await aptos.transaction.build.simple({
+      sender: resolver.accountAddress,
+      data: {
+        function: `${packageAddress}::resolver::initialize`,
+        functionArguments: [
+          packageAddress, // factory_addr
+          packageAddress, // protocol_addr
+        ],
+      },
+    });
+
+    const resolverResult = await aptos.signAndSubmitTransaction({
+      signer: resolver,
+      transaction: initResolverTxn,
+    });
+
+    await aptos.waitForTransaction({
+      transactionHash: resolverResult.hash,
+    });
+
+    resolvers.push(resolver.accountAddress.toString());
+    console.log(`[Deploy] Resolver ${i} initialized at:`, resolver.accountAddress.toString());
+    console.log(`[Deploy] Resolver ${i} private key:`, resolver.privateKey.toString());
+  }
+
+  const deploymentAddresses: DeploymentAddresses = {
+    packageAddress,
+    limitOrderProtocol: packageAddress,
+    escrowFactory: packageAddress,
+    resolver0: resolvers[0],
+    resolver1: resolvers[1],
+    resolver2: resolvers[2],
+    resolver3: resolvers[3],
+    testUSDT: `${packageAddress}::test_coin::TestUSDT`,
+    testDAI: `${packageAddress}::test_coin::TestDAI`,
+  };
+
+  console.log("[Deploy] Deployment completed successfully!");
+  console.log("[Deploy] Addresses:", deploymentAddresses);
+  console.log("[Deploy] Explorer:", `https://explorer.aptoslabs.com/account/${packageAddress}?network=${network}`);
+
+  return deploymentAddresses;
 }
 
-async function executeTransaction(
-  client: AptosClient,
-  account: AptosAccount,
-  payload: any
-): Promise<void> {
-  const txnRequest = await client.generateTransaction(account.address(), payload);
-  const signedTxn = await client.signTransaction(account, txnRequest);
-  const res = await client.submitTransaction(signedTxn);
-  await client.waitForTransaction(res.hash);
-}
+// Helper function to save deployment to JSON
+async function saveDeployment() {
+  try {
+    const addresses = await deployUniteProtocol();
+    
+    // Load existing deployments
+    const deploymentsPath = path.join(__dirname, "..", "deployments.json");
+    let deployments: any = {};
+    
+    if (fs.existsSync(deploymentsPath)) {
+      deployments = JSON.parse(fs.readFileSync(deploymentsPath, "utf8"));
+    }
 
-// Run deployment
-deployContracts()
-  .then((info) => {
-    console.log("[Deploy] Deployment completed!");
-    console.log(JSON.stringify(info, null, 2));
-  })
-  .catch((error) => {
+    // Add Aptos deployment
+    if (!deployments.aptos) {
+      deployments.aptos = {};
+    }
+
+    const network = process.env.APTOS_NETWORK || "devnet";
+    deployments.aptos[network] = {
+      network: network,
+      chainId: network === "mainnet" ? 1 : network === "testnet" ? 2 : 3,
+      ...addresses,
+    };
+
+    fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
+    console.log("[Deploy] Deployment saved to deployments.json");
+    
+  } catch (error) {
     console.error("[Deploy] Deployment failed:", error);
     process.exit(1);
-  });
+  }
+}
+
+// Run deployment if called directly
+if (require.main === module) {
+  saveDeployment();
+}
+
+export { deployUniteProtocol, type DeploymentAddresses };
