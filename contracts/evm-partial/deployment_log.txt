@@ -214,3 +214,72 @@ Sensitive values saved to: /Users/gabrielantonyxaviour/Documents/projects/unite-
    📦 Deploying mock tokens...
    ✅ Mock tokens deployed
    📦 Deploying main contracts...
+   ✅ Main contracts deployed
+   📝 Updating FundResolversNew.s.sol...
+   💰 Attempting to fund resolvers...
+Compiling 1 files with Solc 0.8.23
+Solc 0.8.23 finished in 805.90ms
+Compiler run successful!
+Warning: EIP-3855 is not supported in one or more of the RPCs used.
+Unsupported Chain IDs: 44787.
+Contracts deployed with a Solidity version equal or higher than 0.8.20 might not work properly.
+For more information, please see https://eips.ethereum.org/EIPS/eip-3855
+Script ran successfully.
+
+== Logs ==
+  Funding resolvers with deployer: 0x5121aA62b1f0066c1e9d27B3b5B4E64e0c928a35
+  Deployer balance: 1680728029632000000
+  Chain ID: 44787
+  Sent 50000000000000000 native tokens to Resolver 0
+  Sent 50000000000000000 native tokens to Resolver 1
+  Sent 25000000000000000 native tokens to Test User
+  Transferred USDT to resolvers and test user
+  Transferred DAI to resolvers and test user
+  
+=== FUNDING COMPLETE ===
+  Funded Resolver 0: 0x875eF470dffF58acd5903c704DB65D50022eA994
+  Funded Resolver 1: 0x24a330C62b739f1511Ec3D41cbfDA5fCc4DD6Ae6
+  Funded Test User: 0x6B9ad963c764a06A7ef8ff96D38D0cB86575eC00
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 44787
+
+Estimated gas price: 25.001 gwei
+
+Estimated total gas used for script: 528857
+
+Estimated amount required: 0.013221953857 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/gabrielantonyxaviour/Documents/projects/unite-defi/resolver/contracts/evm-partial/broadcast/FundResolversNew.s.sol/44787/run-latest.json
+
+Sensitive values saved to: /Users/gabrielantonyxaviour/Documents/projects/unite-defi/resolver/contracts/evm-partial/cache/FundResolversNew.s.sol/44787/run-latest.json
+
+
+   ✅ Deployment complete for Celo Alfajores
+   Please add the following to deployments.json:
+
+    "celo_alfajores": {
+      "chainId": 44787,
+      "name": "Celo Alfajores",
+      "UniteLimitOrderProtocol": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteEscrowFactory": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver0": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "UniteResolver1": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "MockUSDT": "0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9",
+      "MockDAI": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockWrappedNative": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc"
+    },
+
+
+🚀 Deploying on Unichain Sepolia (Chain ID: 1301)...
+   📦 Deploying mock tokens...
