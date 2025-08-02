@@ -1,119 +1,95 @@
-# Osmosis CosmWasm Contracts
+# Unite Osmosis Cross-Chain Contracts
 
-This directory contains CosmWasm smart contracts for the Osmosis blockchain.
+This repository contains the Osmosis implementation of Unite's cross-chain swap protocol, enabling seamless swaps between EVM and Cosmos-based chains.
 
-## Structure
+## Architecture
 
-```
-contracts/osmosis/
-├── contracts/          # Rust smart contracts
-│   └── counter/       # Example counter contract
-├── tests/             # TypeScript integration tests
-├── scripts/           # Deployment and utility scripts
-└── artifacts/         # Build outputs and deployment info
-```
+- **UniteOrderProtocol**: Manages cross-chain swap orders with Dutch auction pricing
+- **UniteEscrowFactory**: Creates and manages HTLC escrow contracts
+- **UniteEscrow**: HTLC implementation with timelock and safety deposit mechanisms
+- **UniteResolver**: Facilitates cross-chain swaps for resolvers
 
-## Prerequisites
+## Quick Start
 
-- Rust with `wasm32-unknown-unknown` target
-- Node.js and Yarn
-- osmosisd CLI (for CLI deployment)
-- LocalOsmosis or access to Osmosis testnet
+### Prerequisites
 
-## Setup
+- Node.js 18+
+- Rust 1.70+
+- Docker (for local testing)
+- CosmWasm 1.5+
 
-1. Install Rust dependencies:
-```bash
-rustup target add wasm32-unknown-unknown
-cargo install cargo-generate --features vendored-openssl
-```
+### 4-Command Setup
 
-2. Install Node dependencies:
-```bash
-cd contracts/osmosis
-yarn install
-```
-
-3. Copy environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-## Building
-
-Build the counter contract:
-```bash
-cd contracts/counter
-cargo wasm
-```
-
-Optimize for production:
-```bash
-docker run --rm -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.15.0
-```
-
-## Testing
-
-Run TypeScript integration tests:
-```bash
-yarn test
-```
-
-## Deployment
-
-### Using TypeScript (recommended for development)
-
-Deploy to local network:
-```bash
-yarn deploy:local
-```
-
-Deploy to testnet:
-```bash
-yarn deploy:testnet
-```
-
-### Using osmosisd CLI
+Run these commands from `contracts/osmosis/`:
 
 ```bash
-./scripts/deploy_cli.sh
+# 1. Install dependencies and build contracts
+npm install && make build
+
+# 2. Deploy to Osmosis testnet
+npm run deploy:testnet
+
+# 3. Setup cross-chain environment
+npm run setup:cross-chain
+
+# 4. Run cross-chain tests
+npm run test:integration
 ```
 
-## Contract Interaction
+### Environment Setup
 
-### Query count:
+1. Copy `.env.example` to `.env`
+2. Fill in your mnemonics and RPC URLs
+3. Fund your test accounts:
+   - Osmosis testnet: https://faucet.testnet.osmosis.zone/
+   - Base Sepolia: Use existing faucets
+
+### Testing
+
 ```bash
-osmosisd query wasm contract-state smart [CONTRACT_ADDRESS] '{"get_count":{}}'
+# Unit tests
+npm test
+
+# Cross-chain integration tests
+npm run test:integration
+
+# With coverage
+npm run test:coverage
 ```
 
-### Increment:
+### Local Development
+
 ```bash
-osmosisd tx wasm execute [CONTRACT_ADDRESS] '{"increment":{}}' --from [KEY_NAME]
+# Start local Osmosis node
+npm run start:local
+
+# Deploy to local node
+OSMO_TESTNET_RPC=http://localhost:26657 npm run deploy:testnet
+
+# Stop local node
+npm run stop:local
 ```
 
-### Decrement:
-```bash
-osmosisd tx wasm execute [CONTRACT_ADDRESS] '{"decrement":{}}' --from [KEY_NAME]
-```
+## Cross-Chain Flow
 
-## Environment Variables
+1. **Order Creation**: User creates swap order on source chain
+2. **Resolver Commitment**: Resolvers deploy escrows with safety deposits
+3. **Fund Locking**: Tokens are locked in escrows on both chains
+4. **Secret Reveal**: User reveals secret to claim tokens
+5. **Settlement**: Resolvers claim their tokens using the revealed secret
 
-See `.env.example` for all available configuration options:
+## Contract Addresses
 
-- `RPC_ENDPOINT`: Local/custom RPC endpoint
-- `MNEMONIC`: Wallet mnemonic for local development
-- `TESTNET_RPC_ENDPOINT`: Osmosis testnet RPC
-- `TESTNET_MNEMONIC`: Testnet wallet mnemonic
-- `INITIAL_COUNT`: Initial counter value
-- `CHAIN_ID`: Osmosis chain ID
-- `KEY_NAME`: Key name in osmosisd keyring
+After deployment, addresses are saved in `deployments.json`.
 
-## Resources
+## Contributing
 
-- [Osmosis Docs](https://docs.osmosis.zone/)
-- [CosmWasm Docs](https://docs.cosmwasm.com/)
-- [Osmosis Testnet Faucet](https://faucet.testnet.osmosis.zone/)
+1. Install dependencies: `npm install`
+2. Build contracts: `make build`
+3. Run tests: `npm test`
+4. Format code: `npm run format`
+5. Lint: `npm run lint`
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
