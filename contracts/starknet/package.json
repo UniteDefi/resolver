@@ -1,44 +1,58 @@
 {
-  "name": "unite-starknet",
+  "name": "unite-starknet-contracts",
   "version": "1.0.0",
-  "description": "StarkNet contracts for Unite DeFi",
+  "description": "StarkNet HTLC contracts for cross-chain swaps",
+  "main": "index.js",
   "scripts": {
+    "build": "scarb build",
+    "clean": "scarb clean && rm -rf target/",
     "test": "jest",
     "test:watch": "jest --watch",
-    "compile": "scarb build",
-    "generate:wallet": "ts-node scripts/generate-wallet.ts",
-    "deploy:account": "ts-node scripts/deploy-account.ts",
-    "setup": "ts-node scripts/simple-deploy.ts",
-    "test-connection": "ts-node scripts/test-connection.ts",
-    "basic-test": "ts-node scripts/basic-test.ts",
-    "deploy-all": "ts-node scripts/deploy-all.ts",
-    "check-balance": "ts-node scripts/check-balance.ts",
-    "final-deploy": "ts-node scripts/final-deploy.ts",
-    "deploy:testnet": "ts-node scripts/deploy.ts",
-    "deploy:mainnet": "NETWORK=mainnet ts-node scripts/deploy.ts",
-    "deploy:cli": "./scripts/deploy-cli.sh",
-    "interact": "ts-node scripts/interact.ts",
-    "counter:get": "ts-node scripts/interact.ts get",
-    "counter:increase": "ts-node scripts/interact.ts increase",
-    "counter:decrease": "ts-node scripts/interact.ts decrease"
+    "test:crosschain": "jest tests/crosschain-swap.test.ts --testTimeout=300000",
+    "test:starknet": "jest tests/starknet-contracts.test.ts",
+    "test:integration": "jest tests/integration.test.ts --testTimeout=300000",
+    "deploy:all": "yarn build && ts-node scripts/deploy-all.ts",
+    "deploy:fund": "ts-node scripts/fund-resolvers.ts",
+    "setup:complete": "yarn deploy:all && yarn deploy:fund",
+    "setup:verify": "yarn test:starknet && yarn test:integration",
+    "crosschain:test": "yarn test:crosschain",
+    "contracts:verify": "scarb build && echo 'Contracts compiled successfully'",
+    "accounts:check": "ts-node scripts/check-accounts.ts",
+    "balances:check": "ts-node scripts/check-balances.ts",
+    "dev:setup": "yarn contracts:verify && yarn accounts:check && yarn setup:complete",
+    "dev:test": "yarn setup:verify && yarn crosschain:test"
   },
-  "keywords": [
-    "starknet",
-    "cairo",
-    "defi"
-  ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "starknet": "^6.9.0"
+    "starknet": "^6.11.0",
+    "ethers": "^6.13.2",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
-    "@types/node": "^20.11.30",
+    "@types/node": "^20.14.9",
     "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
+    "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.3"
-  }
+    "typescript": "^5.5.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ],
+    "testTimeout": 60000,
+    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"]
+  },
+  "keywords": [
+    "starknet",
+    "htlc",
+    "cross-chain",
+    "defi",
+    "smart-contracts",
+    "cairo"
+  ],
+  "author": "Unite Protocol",
+  "license": "MIT"
 }
