@@ -1,0 +1,29 @@
+[package]
+name = "unite-resolver"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Unite Resolver for cross-chain transaction resolution on Osmosis"
+repository.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+library = []
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-storage = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw2 = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+cw-multi-test = "0.18"
