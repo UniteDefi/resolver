@@ -1,236 +1,325 @@
-module resolver::resolver {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
+module unite::resolver {
+    use std::option;
+    use sui::object::{UID, ID};
     use sui::transfer;
-    use sui::event;
-    use sui::table::{Self, Table};
+    use sui::tx_context::{Self, TxContext};
     use sui::coin::{Self, Coin};
-    use sui::balance::{Self, Balance};
-    use std::vector;
-    use std::option::{Self, Option};
+    use sui::sui::SUI;
+    use sui::event;
+    use sui::clock::{Clock};
 
-    // Error codes
-    const E_UNAUTHORIZED: u64 = 0;
-    const E_INSUFFICIENT_BALANCE: u64 = 1;
-    const E_ALREADY_REGISTERED: u64 = 2;
-    const E_NOT_REGISTERED: u64 = 3;
-    const E_INVALID_PROOF: u64 = 4;
-    const E_ALREADY_CLAIMED: u64 = 5;
+    use unite::escrow::{Self, SuiEscrow, Timelocks};
+    use unite::escrow_factory::{Self, EscrowFactory};
+    use unite::limit_order_protocol::{Self, LimitOrderProtocol, Order};
 
-    // Resolver registry for cross-chain settlements
-    struct ResolverRegistry has key {
+    // === Errors ===
+    const EUnauthorized: u64 = 1;
+    const EInvalidAmount: u64 = 2;
+    const EEscrowNotFound: u64 = 3;
+
+    // === Structs ===
+    
+    /// Resolver state
+    public struct Resolver has key, store {
         id: UID,
         owner: address,
-        resolvers: Table<address, ResolverInfo>,
-        deposits: Table<address, Balance<SUI>>,
-        required_deposit: u64,
-        total_resolvers: u64,
-        paused: bool,
+        factory: ID,
+        protocol: ID,
     }
 
-    // Resolver information
-    struct ResolverInfo has store {
-        address: address,
-        active: bool,
-        total_settlements: u64,
-        success_rate: u64, // Basis points (10000 = 100%)
-        registered_at: u64,
-    }
-
-    // Settlement proof for cross-chain resolution
-    struct SettlementProof has store, drop {
-        order_hash: vector<u8>,
-        src_chain_id: u64,
-        dst_chain_id: u64,
-        src_tx_hash: vector<u8>,
-        dst_tx_hash: vector<u8>,
-        resolver: address,
-        timestamp: u64,
-    }
-
-    // Admin capability
-    struct AdminCap has key {
+    /// Admin capability for resolver
+    public struct ResolverAdminCap has key, store {
         id: UID,
+        resolver_id: ID,
     }
 
-    // Events
-    struct ResolverRegistered has copy, drop {
-        resolver: address,
-        deposit: u64,
+    // === Events ===
+    
+    public struct ResolverCreated has copy, drop {
+        resolver_id: ID,
+        owner: address,
+        factory: ID,
+        protocol: ID,
     }
 
-    struct ResolverDeregistered has copy, drop {
-        resolver: address,
-        refund: u64,
-    }
-
-    struct SettlementCompleted has copy, drop {
+    public struct SrcEscrowDeployed has copy, drop {
+        escrow_id: ID,
         order_hash: vector<u8>,
         resolver: address,
-        src_chain_id: u64,
-        dst_chain_id: u64,
+        partial_amount: u64,
     }
 
-    // Initialize registry
-    fun init(ctx: &mut TxContext) {
-        let sender = tx_context::sender(ctx);
-        
-        let registry = ResolverRegistry {
-            id: object::new(ctx),
-            owner: sender,
-            resolvers: table::new(ctx),
-            deposits: table::new(ctx),
-            required_deposit: 1000000000, // 1 SUI
-            total_resolvers: 0,
-            paused: false,
-        };
-
-        let admin_cap = AdminCap {
-            id: object::new(ctx),
-        };
-
-        transfer::share_object(registry);
-        transfer::transfer(admin_cap, sender);
-    }
-
-    // Register as a resolver
-    public fun register_resolver(
-        registry: &mut ResolverRegistry,
-        deposit: Coin<SUI>,
-        ctx: &mut TxContext,
-    ) {
-        let resolver_address = tx_context::sender(ctx);
-        assert!(!registry.paused, E_UNAUTHORIZED);
-        assert!(!table::contains(&registry.resolvers, resolver_address), E_ALREADY_REGISTERED);
-        assert!(coin::value(&deposit) >= registry.required_deposit, E_INSUFFICIENT_BALANCE);
-
-        let resolver_info = ResolverInfo {
-            address: resolver_address,
-            active: true,
-            total_settlements: 0,
-            success_rate: 10000, // Start with 100%
-            registered_at: tx_context::epoch(ctx),
-        };
-
-        table::add(&mut registry.resolvers, resolver_address, resolver_info);
-        
-        // Store deposit
-        if (table::contains(&registry.deposits, resolver_address)) {
-            balance::join(
-                table::borrow_mut(&mut registry.deposits, resolver_address),
-                coin::into_balance(deposit)
-            );
-        } else {
-            table::add(&mut registry.deposits, resolver_address, coin::into_balance(deposit));
-        }
-
-        registry.total_resolvers = registry.total_resolvers + 1;
-
-        event::emit(ResolverRegistered {
-            resolver: resolver_address,
-            deposit: coin::value(&deposit),
-        });
-    }
-
-    // Deregister as a resolver
-    public fun deregister_resolver(
-        registry: &mut ResolverRegistry,
-        ctx: &mut TxContext,
-    ): Coin<SUI> {
-        let resolver_address = tx_context::sender(ctx);
-        assert!(table::contains(&registry.resolvers, resolver_address), E_NOT_REGISTERED);
-
-        // Remove resolver info
-        let resolver_info = table::remove(&mut registry.resolvers, resolver_address);
-        registry.total_resolvers = registry.total_resolvers - 1;
-
-        // Return deposit
-        let deposit_balance = table::remove(&mut registry.deposits, resolver_address);
-        let refund_amount = balance::value(&deposit_balance);
-        let refund = coin::from_balance(deposit_balance, ctx);
-
-        event::emit(ResolverDeregistered {
-            resolver: resolver_address,
-            refund: refund_amount,
-        });
-
-        refund
-    }
-
-    // Submit settlement proof
-    public fun submit_settlement(
-        registry: &mut ResolverRegistry,
+    public struct DstEscrowDeployed has copy, drop {
+        escrow_id: ID,
         order_hash: vector<u8>,
-        src_chain_id: u64,
-        dst_chain_id: u64,
-        src_tx_hash: vector<u8>,
-        dst_tx_hash: vector<u8>,
-        ctx: &mut TxContext,
-    ) {
-        let resolver_address = tx_context::sender(ctx);
-        assert!(table::contains(&registry.resolvers, resolver_address), E_NOT_REGISTERED);
+        resolver: address,
+        partial_amount: u64,
+    }
+
+    public struct PartialFillExecuted has copy, drop {
+        escrow_id: ID,
+        order_hash: vector<u8>,
+        resolver: address,
+        partial_amount: u64,
+    }
+
+    // === Public Functions ===
+
+    /// Create a new resolver
+    public fun create_resolver(
+        factory_id: ID,
+        protocol_id: ID,
+        ctx: &mut TxContext
+    ): (Resolver, ResolverAdminCap) {
+        let owner = tx_context::sender(ctx);
         
-        let resolver_info = table::borrow_mut(&mut registry.resolvers, resolver_address);
-        assert!(resolver_info.active, E_UNAUTHORIZED);
+        let resolver = Resolver {
+            id: object::new(ctx),
+            owner,
+            factory: factory_id,
+            protocol: protocol_id,
+        };
 
-        // Update resolver stats
-        resolver_info.total_settlements = resolver_info.total_settlements + 1;
+        let resolver_id = object::id(&resolver);
 
-        event::emit(SettlementCompleted {
+        let admin_cap = ResolverAdminCap {
+            id: object::new(ctx),
+            resolver_id,
+        };
+
+        event::emit(ResolverCreated {
+            resolver_id,
+            owner,
+            factory: factory_id,
+            protocol: protocol_id,
+        });
+
+        (resolver, admin_cap)
+    }
+
+    /// Deploy source escrow with partial fill
+    public fun deploy_src_escrow_partial(
+        resolver: &Resolver,
+        factory: &mut EscrowFactory,
+        protocol: &mut LimitOrderProtocol,
+        order: Order,
+        partial_amount: u64,
+        safety_deposit: Coin<SUI>,
+        clock: &Clock,
+        _admin_cap: &ResolverAdminCap,
+        ctx: &mut TxContext
+    ) {
+        assert!(object::id(factory) == resolver.factory, EEscrowNotFound);
+        assert!(object::id(protocol) == resolver.protocol, EEscrowNotFound);
+        assert!(partial_amount > 0 && partial_amount <= limit_order_protocol::get_making_amount(&order), EInvalidAmount);
+        
+        let order_hash = limit_order_protocol::hash_order(&order);
+        let resolver_address = tx_context::sender(ctx);
+        
+        // Create timelocks - no time limits for withdrawal with secret
+        let timelocks = create_timelocks(
+            0,      // src_withdrawal - no limit
+            900,    // src_public_withdrawal - 15 min for incentive
+            1800,   // src_cancellation - 30 min
+            3600,   // src_public_cancellation - 1 hour
+            0,      // dst_withdrawal - no limit
+            900,    // dst_public_withdrawal - 15 min for incentive
+            2700    // dst_cancellation - 45 min
+        );
+        
+        // Calculate total safety deposit for the entire order
+        let making_amount = limit_order_protocol::get_making_amount(&order);
+        let total_safety_deposit = calculate_proportional_amount(
+            making_amount, // total order amount (base for proportion)
+            partial_amount,      // partial amount being filled
+            coin::value(&safety_deposit) * making_amount / partial_amount // scale up to get total
+        );
+        
+        // Create source escrow
+        let escrow_id = escrow_factory::create_src_escrow_partial(
+            factory,
+            order_hash,
+            vector::empty<u8>(), // hashlock will be set later
+            limit_order_protocol::get_maker(&order),
+            @0x0, // taker address (zero for multi-resolver)
+            making_amount,
+            total_safety_deposit,
+            timelocks,
+            partial_amount,
+            resolver_address,
+            safety_deposit,
+            clock,
+            ctx
+        );
+        
+        // Record the fill in the protocol
+        let (actual_making, actual_taking, _) = limit_order_protocol::fill_order(
+            protocol,
+            order,
+            partial_amount,
+            0, // let protocol calculate taking amount
+            option::some(escrow_id),
+            clock,
+            ctx
+        );
+        
+        event::emit(SrcEscrowDeployed {
+            escrow_id,
             order_hash,
             resolver: resolver_address,
-            src_chain_id,
-            dst_chain_id,
+            partial_amount: actual_making,
+        });
+        
+        event::emit(PartialFillExecuted {
+            escrow_id,
+            order_hash,
+            resolver: resolver_address,
+            partial_amount: actual_making,
         });
     }
 
-    // Admin functions
-    public fun set_required_deposit(
-        registry: &mut ResolverRegistry,
-        _cap: &AdminCap,
-        amount: u64,
+    /// Deploy destination escrow with partial fill
+    public fun deploy_dst_escrow_partial(
+        resolver: &Resolver,
+        factory: &mut EscrowFactory,
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        total_amount: u64,
+        src_cancellation_timestamp: u64,
+        partial_amount: u64,
+        safety_deposit: Coin<SUI>,
+        clock: &Clock,
+        _admin_cap: &ResolverAdminCap,
+        ctx: &mut TxContext
     ) {
-        registry.required_deposit = amount;
-    }
-
-    public fun pause_registry(registry: &mut ResolverRegistry, _cap: &AdminCap) {
-        registry.paused = true;
-    }
-
-    public fun unpause_registry(registry: &mut ResolverRegistry, _cap: &AdminCap) {
-        registry.paused = false;
-    }
-
-    public fun slash_resolver(
-        registry: &mut ResolverRegistry,
-        _cap: &AdminCap,
-        resolver: address,
-        amount: u64,
-        ctx: &mut TxContext,
-    ): Coin<SUI> {
-        assert!(table::contains(&registry.resolvers, resolver), E_NOT_REGISTERED);
+        assert!(object::id(factory) == resolver.factory, EEscrowNotFound);
+        assert!(partial_amount > 0 && partial_amount <= total_amount, EInvalidAmount);
         
-        let deposit_balance = table::borrow_mut(&mut registry.deposits, resolver);
-        assert!(balance::value(deposit_balance) >= amount, E_INSUFFICIENT_BALANCE);
+        let resolver_address = tx_context::sender(ctx);
         
-        coin::from_balance(balance::split(deposit_balance, amount), ctx)
+        // Create timelocks
+        let timelocks = create_timelocks(
+            0,      // src_withdrawal
+            900,    // src_public_withdrawal
+            1800,   // src_cancellation
+            3600,   // src_public_cancellation
+            0,      // dst_withdrawal - no limit
+            900,    // dst_public_withdrawal - 15 min for incentive
+            2700    // dst_cancellation - 45 min
+        );
+        
+        // Calculate total safety deposit
+        let total_safety_deposit = calculate_proportional_amount(
+            total_amount,
+            partial_amount,
+            coin::value(&safety_deposit) * total_amount / partial_amount
+        );
+        
+        // Create destination escrow
+        let escrow_id = escrow_factory::create_dst_escrow_partial(
+            factory,
+            order_hash,
+            hashlock,
+            maker,
+            @0x0, // taker address
+            total_amount,
+            total_safety_deposit,
+            timelocks,
+            src_cancellation_timestamp,
+            partial_amount,
+            resolver_address,
+            safety_deposit,
+            clock,
+            ctx
+        );
+        
+        event::emit(DstEscrowDeployed {
+            escrow_id,
+            order_hash,
+            resolver: resolver_address,
+            partial_amount,
+        });
+        
+        event::emit(PartialFillExecuted {
+            escrow_id,
+            order_hash,
+            resolver: resolver_address,
+            partial_amount,
+        });
     }
 
-    // View functions
-    public fun is_resolver(registry: &ResolverRegistry, address: address): bool {
-        table::contains(&registry.resolvers, address)
+    /// Deposit tokens into destination escrow
+    public fun deposit_tokens_to_escrow(
+        escrow: &mut SuiEscrow,
+        tokens: Coin<SUI>,
+        _admin_cap: &ResolverAdminCap,
+        ctx: &mut TxContext
+    ) {
+        escrow::deposit_sui_tokens(escrow, tokens, ctx);
     }
 
-    public fun get_resolver_info(registry: &ResolverRegistry, address: address): &ResolverInfo {
-        assert!(table::contains(&registry.resolvers, address), E_NOT_REGISTERED);
-        table::borrow(&registry.resolvers, address)
+    /// Withdraw from escrow with secret
+    public fun withdraw_with_secret(
+        escrow: &mut SuiEscrow,
+        secret: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        escrow::withdraw_sui_with_secret(escrow, secret, clock, ctx);
     }
 
-    public fun total_resolvers(registry: &ResolverRegistry): u64 {
-        registry.total_resolvers
+    /// Cancel escrow
+    public fun cancel_escrow(
+        escrow: &mut SuiEscrow,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        escrow::cancel_sui_escrow(escrow, clock, ctx);
     }
 
-    public fun required_deposit(registry: &ResolverRegistry): u64 {
-        registry.required_deposit
+    // === Helper Functions ===
+    
+    fun create_timelocks(
+        src_withdrawal: u32,
+        src_public_withdrawal: u32,
+        src_cancellation: u32,
+        src_public_cancellation: u32,
+        dst_withdrawal: u32,
+        dst_public_withdrawal: u32,
+        dst_cancellation: u32,
+    ): Timelocks {
+        escrow::create_timelocks(
+            0, // deployed_at will be set by escrow
+            src_withdrawal,
+            src_public_withdrawal,
+            src_cancellation,
+            src_public_cancellation,
+            dst_withdrawal,
+            dst_public_withdrawal,
+            dst_cancellation,
+        )
+    }
+    
+    fun calculate_proportional_amount(total: u64, partial: u64, base_amount: u64): u64 {
+        (base_amount * partial) / total
+    }
+
+    // === View Functions ===
+    
+    public fun get_resolver_info(resolver: &Resolver): (address, ID, ID) {
+        (resolver.owner, resolver.factory, resolver.protocol)
+    }
+    
+    public fun get_resolver_owner(resolver: &Resolver): address {
+        resolver.owner
+    }
+    
+    public fun get_resolver_factory(resolver: &Resolver): ID {
+        resolver.factory
+    }
+    
+    public fun get_resolver_protocol(resolver: &Resolver): ID {
+        resolver.protocol
     }
 }
