@@ -1,196 +1,182 @@
-module unite_resolver::resolver {
+module aptos_addr::resolver {
     use std::signer;
-    use std::vector;
-    use aptos_framework::event;
-    
+    use std::option;
+    use aptos_framework::coin::{Coin};
+    use aptos_framework::aptos_coin::AptosCoin;
+    use aptos_framework::account;
+    use aptos_framework::event::{Self, EventHandle};
+    use aptos_addr::escrow::{Self, Immutables};
+    use aptos_addr::escrow_factory;
+    use aptos_addr::limit_order_protocol::{Self, Order};
+
     // Error codes
     const E_NOT_AUTHORIZED: u64 = 1;
-    const E_ALREADY_REGISTERED: u64 = 2;
-    const E_NOT_REGISTERED: u64 = 3;
-    const E_INVALID_FEE: u64 = 4;
+    const E_INVALID_PARAMETERS: u64 = 2;
 
-    struct ResolverRegistry has key {
-        resolvers: vector<ResolverInfo>,
-        resolver_count: u64,
+    struct Resolver has key {
+        owner: address,
+        factory_addr: address,
+        protocol_addr: address,
+        
+        // Events
+        src_escrow_deployed_events: EventHandle<SrcEscrowDeployedEvent>,
+        dst_escrow_deployed_events: EventHandle<DstEscrowDeployedEvent>,
+        partial_fill_executed_events: EventHandle<PartialFillExecutedEvent>,
     }
 
-    struct ResolverInfo has store, copy, drop {
-        address: address,
-        name: vector<u8>,
-        fee_bps: u64, // Fee in basis points (1 = 0.01%)
-        is_active: bool,
-        total_resolved: u64,
+    struct SrcEscrowDeployedEvent has drop, store {
+        escrow_address: address,
+        order_hash: vector<u8>,
     }
 
-    struct ResolverEvents has key {
-        resolver_registered_events: event::EventHandle<ResolverRegisteredEvent>,
-        resolver_updated_events: event::EventHandle<ResolverUpdatedEvent>,
-        swap_resolved_events: event::EventHandle<SwapResolvedEvent>,
+    struct DstEscrowDeployedEvent has drop, store {
+        escrow_address: address,
+        order_hash: vector<u8>,
     }
 
-    struct ResolverRegisteredEvent has drop, store {
-        resolver: address,
-        name: vector<u8>,
-        fee_bps: u64,
+    struct PartialFillExecutedEvent has drop, store {
+        escrow_address: address,
+        order_hash: vector<u8>,
+        partial_amount: u64,
     }
 
-    struct ResolverUpdatedEvent has drop, store {
-        resolver: address,
-        fee_bps: u64,
-        is_active: bool,
+    // Initialize resolver
+    entry public fun initialize(
+        owner: &signer,
+        factory_addr: address,
+        protocol_addr: address,
+    ) {
+        let owner_addr = signer::address_of(owner);
+        
+        let resolver = Resolver {
+            owner: owner_addr,
+            factory_addr,
+            protocol_addr,
+            src_escrow_deployed_events: account::new_event_handle<SrcEscrowDeployedEvent>(owner),
+            dst_escrow_deployed_events: account::new_event_handle<DstEscrowDeployedEvent>(owner),
+            partial_fill_executed_events: account::new_event_handle<PartialFillExecutedEvent>(owner),
+        };
+        
+        move_to(owner, resolver);
     }
 
-    struct SwapResolvedEvent has drop, store {
-        resolver: address,
-        escrow_id: vector<u8>,
+    // Deploy source escrow with partial fill
+    public fun deploy_src_partial<CoinType>(
+        resolver_signer: &signer,
+        immutables: Immutables,
+        order: Order,
+        signature: vector<u8>,
+        _amount: u64,
+        partial_amount: u64,
+        safety_deposit: Coin<AptosCoin>,
+        resolver_addr: address,
+    ) acquires Resolver {
+        let resolver_data = borrow_global_mut<Resolver>(resolver_addr);
+        assert!(signer::address_of(resolver_signer) == resolver_data.owner, E_NOT_AUTHORIZED);
+        
+        // Check if this is first fill for this order
+        let order_hash = escrow::get_order_hash(&immutables);
+        let existing_escrow = escrow_factory::get_src_escrow_address(order_hash, resolver_data.factory_addr);
+        
+        let escrow_addr = if (existing_escrow == @0x0) {
+            // First resolver - create escrow and fill order
+            let escrow_addr = escrow_factory::create_src_escrow_partial<CoinType>(
+                resolver_signer, immutables, partial_amount, safety_deposit, resolver_data.factory_addr
+            );
+            
+            // Fill the order through limit order protocol
+            let (_actual_making, _actual_taking, _filled_order_hash) = limit_order_protocol::fill_order<CoinType, CoinType>(
+                resolver_signer, order, signature, partial_amount, 0, option::some(escrow_addr), resolver_data.protocol_addr
+            );
+            
+            event::emit_event(&mut resolver_data.src_escrow_deployed_events, SrcEscrowDeployedEvent {
+                escrow_address: escrow_addr,
+                order_hash,
+            });
+            
+            escrow_addr
+        } else {
+            // Subsequent resolver - add to existing escrow
+            let escrow_addr = escrow_factory::create_src_escrow_partial<CoinType>(
+                resolver_signer, immutables, partial_amount, safety_deposit, resolver_data.factory_addr
+            );
+            
+            // Fill the order through limit order protocol
+            let (_actual_making, _actual_taking, _filled_order_hash) = limit_order_protocol::fill_order<CoinType, CoinType>(
+                resolver_signer, order, signature, partial_amount, 0, option::some(escrow_addr), resolver_data.protocol_addr
+            );
+            
+            escrow_addr
+        };
+        
+        event::emit_event(&mut resolver_data.partial_fill_executed_events, PartialFillExecutedEvent {
+            escrow_address: escrow_addr,
+            order_hash,
+            partial_amount,
+        });
+    }
+
+    // Deploy destination escrow with partial fill
+    public fun deploy_dst_partial<CoinType>(
+        resolver_signer: &signer,
+        immutables: Immutables,
+        src_cancellation_timestamp: u64,
+        partial_amount: u64,
+        safety_deposit: Coin<AptosCoin>,
+        tokens: Coin<CoinType>,
+        resolver_addr: address,
+    ) acquires Resolver {
+        let resolver_data = borrow_global_mut<Resolver>(resolver_addr);
+        assert!(signer::address_of(resolver_signer) == resolver_data.owner, E_NOT_AUTHORIZED);
+        
+        let order_hash = escrow::get_order_hash(&immutables);
+        
+        // Create destination escrow
+        let escrow_addr = escrow_factory::create_dst_escrow_partial<CoinType>(
+            resolver_signer, immutables, src_cancellation_timestamp, partial_amount, safety_deposit, resolver_data.factory_addr
+        );
+        
+        // Deposit tokens to escrow
+        escrow::deposit_coins<CoinType>(tokens, escrow_addr);
+        
+        event::emit_event(&mut resolver_data.dst_escrow_deployed_events, DstEscrowDeployedEvent {
+            escrow_address: escrow_addr,
+            order_hash,
+        });
+        
+        event::emit_event(&mut resolver_data.partial_fill_executed_events, PartialFillExecutedEvent {
+            escrow_address: escrow_addr,
+            order_hash,
+            partial_amount,
+        });
+    }
+
+    // Withdraw from escrow with secret
+    public fun withdraw<CoinType>(
+        caller: &signer,
         secret: vector<u8>,
+        immutables: Immutables,
+        escrow_addr: address,
+    ) {
+        let caller_addr = signer::address_of(caller);
+        escrow::withdraw_with_secret<CoinType>(caller_addr, secret, immutables, escrow_addr);
     }
 
-    public fun initialize(admin: &signer) {
-        move_to(admin, ResolverRegistry {
-            resolvers: vector::empty(),
-            resolver_count: 0,
-        });
-        
-        move_to(admin, ResolverEvents {
-            resolver_registered_events: event::new_event_handle<ResolverRegisteredEvent>(admin),
-            resolver_updated_events: event::new_event_handle<ResolverUpdatedEvent>(admin),
-            swap_resolved_events: event::new_event_handle<SwapResolvedEvent>(admin),
-        });
+    // Cancel escrow
+    public fun cancel<CoinType>(
+        caller: &signer,
+        immutables: Immutables,
+        escrow_addr: address,
+    ) {
+        let caller_addr = signer::address_of(caller);
+        escrow::cancel<CoinType>(caller_addr, immutables, escrow_addr);
     }
 
-    public entry fun register_resolver(
-        resolver: &signer,
-        name: vector<u8>,
-        fee_bps: u64,
-    ) acquires ResolverRegistry, ResolverEvents {
-        let resolver_address = signer::address_of(resolver);
-        let registry = borrow_global_mut<ResolverRegistry>(@unite_resolver);
-        
-        // Check if already registered
-        let i = 0;
-        let len = vector::length(&registry.resolvers);
-        while (i < len) {
-            let info = vector::borrow(&registry.resolvers, i);
-            assert!(info.address != resolver_address, E_ALREADY_REGISTERED);
-            i = i + 1;
-        };
-        
-        // Validate fee
-        assert!(fee_bps <= 10000, E_INVALID_FEE); // Max 100%
-        
-        // Register resolver
-        let resolver_info = ResolverInfo {
-            address: resolver_address,
-            name,
-            fee_bps,
-            is_active: true,
-            total_resolved: 0,
-        };
-        
-        vector::push_back(&mut registry.resolvers, resolver_info);
-        registry.resolver_count = registry.resolver_count + 1;
-        
-        // Emit event
-        let events = borrow_global_mut<ResolverEvents>(@unite_resolver);
-        event::emit_event(&mut events.resolver_registered_events, ResolverRegisteredEvent {
-            resolver: resolver_address,
-            name,
-            fee_bps,
-        });
-    }
 
-    public entry fun update_resolver(
-        resolver: &signer,
-        fee_bps: u64,
-        is_active: bool,
-    ) acquires ResolverRegistry, ResolverEvents {
-        let resolver_address = signer::address_of(resolver);
-        let registry = borrow_global_mut<ResolverRegistry>(@unite_resolver);
-        
-        // Find resolver
-        let i = 0;
-        let len = vector::length(&registry.resolvers);
-        let found = false;
-        
-        while (i < len) {
-            let info = vector::borrow_mut(&mut registry.resolvers, i);
-            if (info.address == resolver_address) {
-                info.fee_bps = fee_bps;
-                info.is_active = is_active;
-                found = true;
-                break
-            };
-            i = i + 1;
-        };
-        
-        assert!(found, E_NOT_REGISTERED);
-        
-        // Emit event
-        let events = borrow_global_mut<ResolverEvents>(@unite_resolver);
-        event::emit_event(&mut events.resolver_updated_events, ResolverUpdatedEvent {
-            resolver: resolver_address,
-            fee_bps,
-            is_active,
-        });
-    }
-
-    public entry fun resolve_swap(
-        resolver: &signer,
-        escrow_id: vector<u8>,
-        secret: vector<u8>,
-    ) acquires ResolverRegistry, ResolverEvents {
-        let resolver_address = signer::address_of(resolver);
-        let registry = borrow_global_mut<ResolverRegistry>(@unite_resolver);
-        
-        // Find and update resolver stats
-        let i = 0;
-        let len = vector::length(&registry.resolvers);
-        let found = false;
-        
-        while (i < len) {
-            let info = vector::borrow_mut(&mut registry.resolvers, i);
-            if (info.address == resolver_address) {
-                assert!(info.is_active, E_NOT_AUTHORIZED);
-                info.total_resolved = info.total_resolved + 1;
-                found = true;
-                break
-            };
-            i = i + 1;
-        };
-        
-        assert!(found, E_NOT_REGISTERED);
-        
-        // TODO: Interact with escrow contract to resolve
-        
-        // Emit event
-        let events = borrow_global_mut<ResolverEvents>(@unite_resolver);
-        event::emit_event(&mut events.swap_resolved_events, SwapResolvedEvent {
-            resolver: resolver_address,
-            escrow_id,
-            secret,
-        });
-    }
-
+    // View functions
     #[view]
-    public fun get_resolver_count(): u64 acquires ResolverRegistry {
-        borrow_global<ResolverRegistry>(@unite_resolver).resolver_count
-    }
-
-    #[view]
-    public fun get_resolver_info(resolver_address: address): (vector<u8>, u64, bool, u64) acquires ResolverRegistry {
-        let registry = borrow_global<ResolverRegistry>(@unite_resolver);
-        let i = 0;
-        let len = vector::length(&registry.resolvers);
-        
-        while (i < len) {
-            let info = vector::borrow(&registry.resolvers, i);
-            if (info.address == resolver_address) {
-                return (info.name, info.fee_bps, info.is_active, info.total_resolved)
-            };
-            i = i + 1;
-        };
-        
-        abort E_NOT_REGISTERED
+    public fun get_resolver_info(resolver_addr: address): (address, address, address) acquires Resolver {
+        let resolver = borrow_global<Resolver>(resolver_addr);
+        (resolver.owner, resolver.factory_addr, resolver.protocol_addr)
     }
 }
