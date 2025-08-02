@@ -1,29 +1,25 @@
 {
-  "name": "cardano-counter-validator",
+  "name": "cardano-crosschain-htlc",
   "version": "1.0.0",
-  "description": "Cardano counter validator with TypeScript tests",
+  "description": "Cross-chain HTLC implementation for Cardano <> EVM swaps",
+  "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "build:aiken": "aiken build",
-    "deploy": "ts-node scripts/deploy.ts",
-    "generate-wallet": "ts-node scripts/generate-wallet.ts",
-    "generate-wallet-simple": "ts-node scripts/generate-wallet-simple.ts",
-    "derive-address": "ts-node scripts/derive-address.ts"
+    "test": "vitest",
+    "test:crosschain": "vitest test/crosschain.test.ts",
+    "build": "tsc",
+    "compile:validators": "aiken build",
+    "deploy:testnet": "node scripts/deploy-testnet.js"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
-    "@types/node": "^20.11.24",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.0.0",
+    "vitest": "^1.0.0",
+    "chai": "^4.3.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@cardano-sdk/core": "^0.35.0",
-    "@cardano-sdk/crypto": "^0.1.28",
-    "@cardano-sdk/util": "^0.15.0",
-    "lucid-cardano": "^0.10.7",
-    "dotenv": "^16.4.5"
+    "ethers": "^6.8.0",
+    "@emurgo/cardano-serialization-lib-nodejs": "^12.0.0",
+    "@blockfrost/blockfrost-js": "^7.0.0",
+    "lucid-cardano": "^0.10.0"
   }
 }
