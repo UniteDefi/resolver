@@ -54,6 +54,83 @@ module aptos_addr::escrow_factory {
         safety_deposit: u64,
     }
 
+    // Entry function to create source escrow with immutables as individual parameters
+    entry public fun deploy_src_escrow<CoinType>(
+        resolver: &signer,
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        token: address,
+        amount: u64,
+        safety_deposit: u64,
+        timelocks: u64,
+        partial_amount: u64,
+        safety_deposit_apt_amount: u64,
+    ) acquires EscrowFactory {
+        let immutables = escrow::create_immutables(
+            order_hash,
+            hashlock,
+            maker,
+            taker,
+            token,
+            amount,
+            safety_deposit,
+            timelocks
+        );
+        
+        let safety_deposit_apt = coin::withdraw<AptosCoin>(resolver, safety_deposit_apt_amount);
+        let factory_addr = @aptos_addr;
+        
+        let _escrow_addr = create_src_escrow_partial<CoinType>(
+            resolver,
+            immutables,
+            partial_amount,
+            safety_deposit_apt,
+            factory_addr
+        );
+    }
+
+    // Entry function for user to deposit to escrow
+    entry public fun user_deposit<CoinType>(
+        user: &signer,
+        amount: u64,
+        escrow_addr: address,
+    ) {
+        let coins = coin::withdraw<CoinType>(user, amount);
+        escrow::deposit_coins<CoinType>(coins, escrow_addr);
+        escrow::mark_user_funded<CoinType>(escrow_addr);
+    }
+
+    // Entry function to withdraw with secret
+    entry public fun withdraw_with_secret<CoinType>(
+        caller: &signer,
+        secret: vector<u8>,
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        token: address,
+        amount: u64,
+        safety_deposit: u64,
+        timelocks: u64,
+        escrow_addr: address,
+    ) {
+        let caller_addr = signer::address_of(caller);
+        let immutables = escrow::create_immutables(
+            order_hash,
+            hashlock,
+            maker,
+            taker,
+            token,
+            amount,
+            safety_deposit,
+            timelocks
+        );
+        
+        escrow::withdraw_with_secret<CoinType>(caller_addr, secret, immutables, escrow_addr);
+    }
+
     // Initialize factory
     entry public fun initialize(admin: &signer) {
         let admin_addr = signer::address_of(admin);
