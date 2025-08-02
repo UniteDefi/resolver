@@ -441,6 +441,29 @@ _caller_reward: u64,
         escrow.resolvers
     }
 
+    // Function to create Immutables struct
+    public fun create_immutables(
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        token: address,
+        amount: u64,
+        safety_deposit: u64,
+        timelocks: u64,
+    ): Immutables {
+        Immutables {
+            order_hash,
+            hashlock,
+            maker,
+            taker,
+            token,
+            amount,
+            safety_deposit,
+            timelocks,
+        }
+    }
+
     // Getter functions for Immutables fields
     public fun get_order_hash(immutables: &Immutables): vector<u8> {
         immutables.order_hash
