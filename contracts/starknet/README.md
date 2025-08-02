@@ -1,143 +1,228 @@
-# StarkNet Unite DeFi Contracts
+# Unite StarkNet HTLC Contracts
 
-This directory contains StarkNet smart contracts written in Cairo for the Unite DeFi project.
+Cross-chain atomic swap implementation using Hash Time Locked Contracts (HTLC) between EVM chains and StarkNet.
 
-## Prerequisites
+## 🌉 Overview
 
-1. **Scarb** - Cairo package manager
+This implementation extends the Unite Protocol to support cross-chain swaps between EVM-based chains (like Base Sepolia) and StarkNet. It uses HTLC mechanisms to ensure atomic execution across different blockchain networks.
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+1. **Scarb** (StarkNet package manager)
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
    ```
 
-2. **Starkli** (optional) - StarkNet CLI for deployment
+2. **Node.js** (v18+)
    ```bash
-   curl https://get.starkli.sh | sh
-   ```
-
-3. **Node.js** - For running TypeScript tests and deployment scripts
-   ```bash
-   # Install Node.js 18+ from https://nodejs.org/
-   ```
-
-## Setup
-
-1. Install dependencies:
-   ```bash
+   # Install dependencies
    yarn install
    ```
 
-2. Copy environment variables:
+3. **Environment Setup**
    ```bash
    cp .env.example .env
+   # Edit .env with your account details
    ```
 
-3. Configure your `.env` file with:
-   - `STARKNET_RPC_URL`: RPC endpoint for testnet
-   - `STARKNET_ACCOUNT_ADDRESS`: Your StarkNet account address
-   - `STARKNET_PRIVATE_KEY`: Your account's private key
+### 🔧 Setup Commands
 
-## Building Contracts
+Run these 4 commands in sequence from the `contracts/starknet` directory:
 
 ```bash
-scarb build
+# Command 1: Create Cairo contracts
+chmod +x scripts/create-contracts.sh && ./scripts/create-contracts.sh
+
+# Command 2: Create remaining contracts and scripts  
+chmod +x scripts/create-remaining.sh && ./scripts/create-remaining.sh
+
+# Command 3: Create cross-chain test files
+chmod +x scripts/create-tests.sh && ./scripts/create-tests.sh
+
+# Command 4: Create configuration files (this step)
+chmod +x scripts/create-config.sh && ./scripts/create-config.sh
 ```
 
-This will compile the Cairo contracts and generate the necessary artifacts in the `target/` directory.
-
-## Testing
-
-Run the TypeScript tests:
+### 📦 Build and Deploy
 
 ```bash
+# Compile contracts
+yarn build
+
+# Deploy all contracts
+yarn deploy:all
+
+# Fund resolvers with test tokens
+yarn deploy:fund
+
+# Verify deployment
+yarn setup:verify
+```
+
+### 🧪 Testing
+
+```bash
+# Test StarkNet contracts
+yarn test:starknet
+
+# Test cross-chain integration
+yarn test:crosschain
+
+# Run all tests
 yarn test
 ```
 
-For watch mode:
+## 🏗️ Architecture
+
+### Core Components
+
+1. **UniteLimitOrderProtocol** - Order matching and execution
+2. **UniteEscrowFactory** - Deploys and manages escrow contracts
+3. **UniteEscrow** - HTLC implementation with partial fills
+4. **UniteResolver** - Resolver interface for order execution
+5. **Mock Tokens** - Test tokens for development
+
+### Cross-Chain Flow
+
+```
+User (Base Sepolia)     Resolvers           User (StarkNet)
+       |                    |                      |
+   1. Create Order          |                      |
+       |                    |                      |
+   2. Sign Order ---------> |                      |
+       |                    |                      |
+       |              3. Deploy Source Escrows     |
+       |                    |                      |
+       |              4. Deploy Dest Escrows ----> |
+       |                    |                      |
+   5. Lock USDT             |               6. Lock DAI
+       |                    |                      |
+       |              7. Secret Revealed           |
+       |                    |                      |
+   8. Resolvers get USDT    |        9. User gets DAI
+```
+
+## 📋 Contract Addresses
+
+After deployment, addresses are saved to `deployments.json`:
+
+### StarkNet Sepolia
+- UniteLimitOrderProtocol: `0x...`
+- UniteEscrowFactory: `0x...`
+- UniteResolver0: `0x...`
+- UniteResolver1: `0x...`
+- MockUSDT: `0x...`
+- MockDAI: `0x...`
+
+### Base Sepolia (from EVM deployment)
+- UniteLimitOrderProtocol: `0x...`
+- UniteEscrowFactory: `0x...`
+- MockUSDT: `0x...`
+- MockDAI: `0x...`
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Key configuration in `.env`:
+
 ```bash
-yarn test:watch
+# StarkNet Configuration
+STARKNET_ACCOUNT_ADDRESS=0x...
+STARKNET_PRIVATE_KEY=0x...
+STARKNET_RPC_URL=https://starknet-sepolia.public.blastapi.io/rpc/v0_7
+
+# EVM Configuration (for cross-chain)
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+PRIVATE_KEY=0x...
+
+# Resolver Configuration
+RESOLVER_PRIVATE_KEY_0=0x...
+RESOLVER_PRIVATE_KEY_1=0x...
 ```
 
-## Deployment
+### Supported Swaps
 
-### Using TypeScript (starknet.js)
+- Base Sepolia USDT ↔ StarkNet DAI
+- Base Sepolia DAI ↔ StarkNet USDT  
+- Base Sepolia WETH ↔ StarkNet Wrapped Native
 
-Deploy to testnet:
-```bash
-yarn deploy:testnet
-```
+## 🧪 Testing Cross-Chain Swaps
 
-Deploy to mainnet:
-```bash
-yarn deploy:mainnet
-```
-
-### Using Starkli CLI
-
-```bash
-./scripts/deploy-cli.sh testnet
-# or
-./scripts/deploy-cli.sh mainnet
-```
-
-## Interacting with Deployed Contracts
-
-Use the interact script:
+### Running Tests
 
 ```bash
-# Get current counter value
-yarn ts-node scripts/interact.ts get
+# Full cross-chain test
+yarn crosschain:test
 
-# Increase counter
-yarn ts-node scripts/interact.ts increase
-
-# Decrease counter
-yarn ts-node scripts/interact.ts decrease
+# Individual test suites
+yarn test:integration
+yarn test:starknet
 ```
 
-## Contract Overview
+### Test Scenarios
 
-### Counter Contract
+1. **Base Sepolia → StarkNet**
+   - User swaps USDT for DAI
+   - Multiple resolvers with partial fills
+   - HTLC atomic execution
 
-A simple counter contract demonstrating basic StarkNet functionality:
+2. **StarkNet → Base Sepolia**
+   - User swaps DAI for USDT
+   - Reverse direction testing
+   - Bidirectional verification
 
-- `increase_counter()`: Increments the counter by 1
-- `decrease_counter()`: Decrements the counter by 1 (with underflow protection)
-- `get_counter()`: Returns the current counter value
+## 🔐 Security Features
 
-Events:
-- `CounterIncreased`: Emitted when counter is increased
-- `CounterDecreased`: Emitted when counter is decreased
+- **HTLC Atomic Swaps** - Ensures atomic execution or full rollback
+- **Safety Deposits** - Resolvers stake ETH/STRK to participate
+- **Timelock Mechanisms** - Time-based withdrawal and cancellation
+- **Partial Fill Support** - Multiple resolvers can fill portions
+- **Public Withdrawal Incentives** - Rewards for executing expired orders
 
-## Project Structure
+## 🛠️ Development
+
+### Project Structure
 
 ```
-starknet/
+contracts/starknet/
 ├── src/
-│   ├── lib.cairo         # Main library file
-│   └── counter.cairo     # Counter contract implementation
-├── tests/
-│   └── counter.test.ts   # TypeScript tests
-├── scripts/
-│   ├── deploy.ts         # Deployment script using starknet.js
-│   ├── deploy-cli.sh     # Deployment script using starkli
-│   └── interact.ts       # Interaction script
-├── Scarb.toml           # Scarb configuration
-├── package.json         # Node.js dependencies
-├── tsconfig.json        # TypeScript configuration
-├── jest.config.js       # Jest test configuration
-└── .env.example         # Environment variables template
+│   ├── interfaces/          # Contract interfaces
+│   ├── libraries/           # Utility libraries  
+│   ├── mocks/              # Test tokens
+│   ├── unite_escrow.cairo  # HTLC implementation
+│   ├── unite_escrow_factory.cairo
+│   ├── unite_limit_order_protocol.cairo
+│   └── unite_resolver.cairo
+├── scripts/                 # Deployment scripts
+├── tests/                   # Test suites
+└── target/                  # Compiled contracts
 ```
 
-## Troubleshooting
+### Adding New Features
 
-1. **Scarb not found**: Make sure Scarb is installed and in your PATH
-2. **Contract compilation fails**: Check Cairo syntax and Scarb.toml configuration
-3. **Deployment fails**: Ensure your account has enough ETH for gas fees
-4. **Tests fail**: Make sure you have deployed the contract and updated the `.env` file
+1. Implement in Cairo contracts
+2. Add TypeScript interfaces
+3. Write tests
+4. Update deployment scripts
+5. Test cross-chain integration
 
-## Resources
+## 📚 Resources
 
 - [StarkNet Documentation](https://docs.starknet.io/)
 - [Cairo Book](https://book.cairo-lang.org/)
+- [Unite Protocol](https://github.com/1inch/unite-contracts)
 - [Scarb Documentation](https://docs.swmansion.com/scarb/)
-- [starknet.js Documentation](https://www.starknetjs.com/)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Write tests
+4. Submit pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
