@@ -1,0 +1,373 @@
+#include "imports/stdlib.fc";
+#include "imports/constants.fc";
+#include "imports/jetton-utils.fc";
+
+;; Unite Limit Order Protocol Contract
+;; Handles limit order creation, matching, and execution
+
+;; Storage structure:
+;; slice owner_address
+;; dict active_orders (order_id -> order_data)
+;; dict filled_orders (order_id -> fill_data)
+;; dict user_orders (user_address_hash -> order_ids_list)
+;; int next_order_id
+;; int protocol_fee_rate (basis points)
+;; slice fee_recipient
+
+const int OP_CREATE_ORDER = 20;
+const int OP_FILL_ORDER = 21;
+const int OP_CANCEL_ORDER = 22;
+const int OP_UPDATE_ORDER = 23;
+const int OP_BATCH_FILL = 24;
+
+const int ORDER_TYPE_MARKET = 0;
+const int ORDER_TYPE_LIMIT = 1;
+const int ORDER_TYPE_STOP = 2;
+
+const int ORDER_STATUS_ACTIVE = 0;
+const int ORDER_STATUS_FILLED = 1;
+const int ORDER_STATUS_CANCELLED = 2;
+const int ORDER_STATUS_EXPIRED = 3;
+
+(slice, cell, cell, cell, int, int, slice) load_data() inline {
+    slice ds = get_data().begin_parse();
+    slice owner = ds~load_msg_addr();
+    cell active_orders = ds~load_dict();
+    cell filled_orders = ds~load_dict();
+    cell user_orders = ds~load_dict();
+    int next_order_id = ds~load_uint(64);
+    int fee_rate = ds~load_uint(16);
+    slice fee_recipient = ds~load_msg_addr();
+    return (owner, active_orders, filled_orders, user_orders, next_order_id, fee_rate, fee_recipient);
+}
+
+() save_data(slice owner, cell active_orders, cell filled_orders, cell user_orders, 
+            int next_order_id, int fee_rate, slice fee_recipient) impure inline {
+    set_data(begin_cell()
+        .store_slice(owner)
+        .store_dict(active_orders)
+        .store_dict(filled_orders)
+        .store_dict(user_orders)
+        .store_uint(next_order_id, 64)
+        .store_uint(fee_rate, 16)
+        .store_slice(fee_recipient)
+        .end_cell());
+}
+
+;; Calculate order hash for uniqueness
+int calculate_order_hash(int order_id, slice maker, int nonce) inline {
+    return string_hash(begin_cell()
+        .store_uint(order_id, 64)
+        .store_slice(maker)
+        .store_uint(nonce, 64)
+        .end_cell().begin_parse());
+}
+
+;; Create a new limit order
+() handle_create_order(slice in_msg_body, int msg_value, slice sender_address) impure {
+    var (owner, active_orders, filled_orders, user_orders, next_order_id, fee_rate, fee_recipient) = load_data();
+    
+    slice sell_token = in_msg_body~load_msg_addr();
+    slice buy_token = in_msg_body~load_msg_addr();
+    int sell_amount = in_msg_body~load_coins();
+    int buy_amount = in_msg_body~load_coins();
+    int order_type = in_msg_body~load_uint(8);
+    int expiry = in_msg_body~load_uint(32);
+    int nonce = in_msg_body~load_uint(64);
+    
+    throw_unless(ERROR_INVALID_AMOUNT, sell_amount > 0);
+    throw_unless(ERROR_INVALID_AMOUNT, buy_amount > 0);
+    throw_unless(ERROR_INVALID_TIME, expiry > now());
+    
+    int order_id = next_order_id;
+    int order_hash = calculate_order_hash(order_id, sender_address, nonce);
+    
+    ;; Store order data
+    cell order_data = begin_cell()
+        .store_slice(sender_address) ;; maker
+        .store_slice(sell_token)
+        .store_slice(buy_token)
+        .store_coins(sell_amount)
+        .store_coins(buy_amount)
+        .store_coins(0) ;; filled_amount
+        .store_uint(order_type, 8)
+        .store_uint(ORDER_STATUS_ACTIVE, 8)
+        .store_uint(now(), 32) ;; created_at
+        .store_uint(expiry, 32)
+        .store_uint(nonce, 64)
+        .store_uint(order_hash, 256)
+        .end_cell();
+    
+    active_orders~udict_set(64, order_id, order_data.begin_parse());
+    
+    ;; Add to user orders list
+    (slice user_order_list, int user_has_orders) = user_orders.udict_get?(267, sender_address.slice_hash());
+    cell new_user_orders;
+    if (user_has_orders) {
+        new_user_orders = begin_cell()
+            .store_ref(user_order_list.preload_ref())
+            .store_uint(order_id, 64)
+            .end_cell();
+    } else {
+        new_user_orders = begin_cell()
+            .store_uint(order_id, 64)
+            .end_cell();
+    }
+    user_orders~udict_set(267, sender_address.slice_hash(), new_user_orders.begin_parse());
+    
+    ;; Handle token deposit (simplified for TON)
+    if (sell_token.slice_empty?()) {
+        ;; Selling TON
+        throw_unless(ERROR_INSUFFICIENT_FUNDS, msg_value >= sell_amount);
+    }
+    
+    save_data(owner, active_orders, filled_orders, user_orders, next_order_id + 1, fee_rate, fee_recipient);
+}
+
+;; Fill an existing order
+() handle_fill_order(slice in_msg_body, int msg_value, slice sender_address) impure {
+    var (owner, active_orders, filled_orders, user_orders, next_order_id, fee_rate, fee_recipient) = load_data();
+    
+    int order_id = in_msg_body~load_uint(64);
+    int fill_amount = in_msg_body~load_coins();
+    
+    ;; Get order data
+    (slice order_data, int order_exists) = active_orders.udict_get?(64, order_id);
+    throw_unless(ERROR_INVALID_STATE, order_exists);
+    
+    slice maker = order_data~load_msg_addr();
+    slice sell_token = order_data~load_msg_addr();
+    slice buy_token = order_data~load_msg_addr();
+    int sell_amount = order_data~load_coins();
+    int buy_amount = order_data~load_coins();
+    int filled_amount = order_data~load_coins();
+    int order_type = order_data~load_uint(8);
+    int status = order_data~load_uint(8);
+    int created_at = order_data~load_uint(32);
+    int expiry = order_data~load_uint(32);
+    int nonce = order_data~load_uint(64);
+    int order_hash = order_data~load_uint(256);
+    
+    throw_unless(ERROR_INVALID_STATE, status == ORDER_STATUS_ACTIVE);
+    throw_unless(ERROR_INVALID_TIME, now() <= expiry);
+    throw_unless(ERROR_INVALID_AMOUNT, fill_amount > 0);
+    
+    int remaining_amount = sell_amount - filled_amount;
+    throw_unless(ERROR_INVALID_AMOUNT, fill_amount <= remaining_amount);
+    
+    ;; Calculate buy amount for this fill
+    int required_buy_amount = (buy_amount * fill_amount) / sell_amount;
+    
+    ;; Check taker has enough funds
+    if (buy_token.slice_empty?()) {
+        ;; Buying with TON
+        throw_unless(ERROR_INSUFFICIENT_FUNDS, msg_value >= required_buy_amount);
+    }
+    
+    ;; Calculate fees
+    int protocol_fee = (required_buy_amount * fee_rate) / 10000;
+    int net_buy_amount = required_buy_amount - protocol_fee;
+    
+    ;; Update filled amount
+    int new_filled_amount = filled_amount + fill_amount;
+    int new_status = ORDER_STATUS_ACTIVE;
+    if (new_filled_amount == sell_amount) {
+        new_status = ORDER_STATUS_FILLED;
+    }
+    
+    ;; Update order data
+    cell updated_order = begin_cell()
+        .store_slice(maker)
+        .store_slice(sell_token)
+        .store_slice(buy_token)
+        .store_coins(sell_amount)
+        .store_coins(buy_amount)
+        .store_coins(new_filled_amount)
+        .store_uint(order_type, 8)
+        .store_uint(new_status, 8)
+        .store_uint(created_at, 32)
+        .store_uint(expiry, 32)
+        .store_uint(nonce, 64)
+        .store_uint(order_hash, 256)
+        .end_cell();
+    
+    if (new_status == ORDER_STATUS_FILLED) {
+        ;; Move to filled orders
+        filled_orders~udict_set(64, order_id, updated_order.begin_parse());
+        active_orders~udict_delete?(64, order_id);
+    } else {
+        ;; Keep in active orders
+        active_orders~udict_set(64, order_id, updated_order.begin_parse());
+    }
+    
+    ;; Execute transfers
+    execute_order_transfer(maker, sender_address, sell_token, buy_token, 
+                          fill_amount, net_buy_amount, protocol_fee, fee_recipient);
+    
+    save_data(owner, active_orders, filled_orders, user_orders, next_order_id, fee_rate, fee_recipient);
+}
+
+;; Execute token transfers for order fill
+() execute_order_transfer(slice maker, slice taker, slice sell_token, slice buy_token,
+                         int sell_amount, int buy_amount, int protocol_fee, slice fee_recipient) impure {
+    ;; Transfer sell tokens from maker to taker
+    if (sell_token.slice_empty?()) {
+        ;; Send TON
+        send_ton(taker, sell_amount);
+    } else {
+        ;; Send jettons (simplified - would need jetton wallet interaction)
+        send_jettons(sell_token, taker, sell_amount, maker);
+    }
+    
+    ;; Transfer buy tokens from taker to maker
+    if (buy_token.slice_empty?()) {
+        ;; Send TON
+        send_ton(maker, buy_amount);
+        if (protocol_fee > 0) {
+            send_ton(fee_recipient, protocol_fee);
+        }
+    } else {
+        ;; Send jettons (simplified)
+        send_jettons(buy_token, maker, buy_amount, taker);
+        if (protocol_fee > 0) {
+            send_jettons(buy_token, fee_recipient, protocol_fee, taker);
+        }
+    }
+}
+
+;; Cancel an active order
+() handle_cancel_order(slice in_msg_body, slice sender_address) impure {
+    var (owner, active_orders, filled_orders, user_orders, next_order_id, fee_rate, fee_recipient) = load_data();
+    
+    int order_id = in_msg_body~load_uint(64);
+    
+    ;; Get order data
+    (slice order_data, int order_exists) = active_orders.udict_get?(64, order_id);
+    throw_unless(ERROR_INVALID_STATE, order_exists);
+    
+    slice maker = order_data~load_msg_addr();
+    slice sell_token = order_data~load_msg_addr();
+    slice buy_token = order_data~load_msg_addr();
+    int sell_amount = order_data~load_coins();
+    int buy_amount = order_data~load_coins();
+    int filled_amount = order_data~load_coins();
+    int order_type = order_data~load_uint(8);
+    int status = order_data~load_uint(8);
+    int created_at = order_data~load_uint(32);
+    int expiry = order_data~load_uint(32);
+    int nonce = order_data~load_uint(64);
+    int order_hash = order_data~load_uint(256);
+    
+    ;; Only maker can cancel
+    throw_unless(ERROR_UNAUTHORIZED, equal_slices(sender_address, maker));
+    throw_unless(ERROR_INVALID_STATE, status == ORDER_STATUS_ACTIVE);
+    
+    ;; Update status to cancelled
+    cell cancelled_order = begin_cell()
+        .store_slice(maker)
+        .store_slice(sell_token)
+        .store_slice(buy_token)
+        .store_coins(sell_amount)
+        .store_coins(buy_amount)
+        .store_coins(filled_amount)
+        .store_uint(order_type, 8)
+        .store_uint(ORDER_STATUS_CANCELLED, 8)
+        .store_uint(created_at, 32)
+        .store_uint(expiry, 32)
+        .store_uint(nonce, 64)
+        .store_uint(order_hash, 256)
+        .end_cell();
+    
+    ;; Move to filled orders (using same dict for cancelled orders)
+    filled_orders~udict_set(64, order_id, cancelled_order.begin_parse());
+    active_orders~udict_delete?(64, order_id);
+    
+    ;; Refund remaining sell tokens
+    int remaining_amount = sell_amount - filled_amount;
+    if ((remaining_amount > 0) & sell_token.slice_empty?()) {
+        send_ton(maker, remaining_amount);
+    }
+    
+    save_data(owner, active_orders, filled_orders, user_orders, next_order_id, fee_rate, fee_recipient);
+}
+
+;; Send TON helper
+() send_ton(slice dest_addr, int amount) impure {
+    var msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(dest_addr)
+        .store_coins(amount)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .end_cell();
+    send_raw_message(msg, 1);
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) {
+        return ();
+    }
+    
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        return ();
+    }
+    slice sender_address = cs~load_msg_addr();
+    
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+    
+    if (op == OP_CREATE_ORDER) {
+        handle_create_order(in_msg_body, msg_value, sender_address);
+        return ();
+    }
+    
+    if (op == OP_FILL_ORDER) {
+        handle_fill_order(in_msg_body, msg_value, sender_address);
+        return ();
+    }
+    
+    if (op == OP_CANCEL_ORDER) {
+        handle_cancel_order(in_msg_body, sender_address);
+        return ();
+    }
+    
+    throw(0xffff);
+}
+
+;; Get methods
+(slice, slice, slice, int, int, int, int, int, int, int) get_order_info(int order_id) method_id {
+    var (_, active_orders, filled_orders, _, _, _, _) = load_data();
+    
+    ;; Try active orders first
+    (slice order_data, int found) = active_orders.udict_get?(64, order_id);
+    if (~ found) {
+        ;; Try filled orders
+        (order_data, found) = filled_orders.udict_get?(64, order_id);
+        throw_unless(ERROR_INVALID_STATE, found);
+    }
+    
+    slice maker = order_data~load_msg_addr();
+    slice sell_token = order_data~load_msg_addr();
+    slice buy_token = order_data~load_msg_addr();
+    int sell_amount = order_data~load_coins();
+    int buy_amount = order_data~load_coins();
+    int filled_amount = order_data~load_coins();
+    int order_type = order_data~load_uint(8);
+    int status = order_data~load_uint(8);
+    int created_at = order_data~load_uint(32);
+    int expiry = order_data~load_uint(32);
+    
+    return (maker, sell_token, buy_token, sell_amount, buy_amount, filled_amount, order_type, status, created_at, expiry);
+}
+
+int get_next_order_id() method_id {
+    var (_, _, _, _, next_order_id, _, _) = load_data();
+    return next_order_id;
+}
+
+int get_active_orders_count() method_id {
+    var (_, active_orders, _, _, _, _, _) = load_data();
+    ;; Simplified count - would need to iterate to get exact count
+    return 0; ;; Placeholder
+}
