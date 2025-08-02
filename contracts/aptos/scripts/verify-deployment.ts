@@ -1,158 +1,177 @@
-import { AptosClient, AptosAccount } from "aptos";
+import {
+  Account,
+  Aptos,
+  AptosConfig,
+  Network,
+  Ed25519PrivateKey,
+} from "@aptos-labs/ts-sdk";
 import * as fs from "fs";
 import * as path from "path";
-import * as dotenv from "dotenv";
+import dotenv from "dotenv";
+import allDeployments from "../deployments.json";
 
 dotenv.config();
 
-interface DeploymentInfo {
-  network: string;
-  deployer: string;
-  modules: {
-    escrow: string;
-    escrowFactory: string;
-    limitOrderProtocol: string;
-    resolver: string;
-    testCoinUSDT: string;
-    testCoinDAI: string;
-  };
-  timestamp: string;
-}
-
 async function verifyDeployment() {
-  console.log("[Verify] Starting deployment verification...\n");
+  console.log("[Verify] Starting deployment verification...");
 
-  // Load deployment info
-  const deploymentPath = path.join(__dirname, "..", "deployments.json");
-  if (!fs.existsSync(deploymentPath)) {
-    console.error("[Verify] No deployment info found. Run 'yarn deploy' first.");
+  // Configuration
+  const network = (process.env.APTOS_NETWORK as Network) || Network.DEVNET;
+  const config = new AptosConfig({ network });
+  const aptos = new Aptos(config);
+
+  // Account setup
+  const privateKey = process.env.APTOS_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error("APTOS_PRIVATE_KEY not found in environment variables");
+  }
+
+  const account = Account.fromPrivateKey({
+    privateKey: new Ed25519PrivateKey(privateKey),
+  });
+
+  console.log("[Verify] Account address:", account.accountAddress.toString());
+  console.log("[Verify] Network:", network);
+
+  // Get deployment info
+  const deployments = allDeployments.aptos?.[network];
+  if (!deployments) {
+    console.error(`[Verify] No deployments found for network: ${network}`);
+    console.log("[Verify] Available networks:", Object.keys(allDeployments.aptos || {}));
     process.exit(1);
   }
 
-  const deployment: DeploymentInfo = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
-  console.log("[Verify] Deployment Info:");
-  console.log(`  Network: ${deployment.network}`);
-  console.log(`  Deployer: ${deployment.deployer}`);
-  console.log(`  Timestamp: ${deployment.timestamp}`);
+  const packageAddress = deployments.packageAddress;
+  console.log("[Verify] Package address:", packageAddress);
 
-  // Initialize client
-  const NODE_URL = process.env.APTOS_NODE_URL || deployment.network;
-  const client = new AptosClient(NODE_URL);
+  // Check account balance
+  try {
+    const balance = await aptos.getAccountResource({
+      accountAddress: account.accountAddress,
+      resourceType: "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>",
+    });
+    console.log("[Verify] Account balance:", (balance as any).coin.value);
+  } catch (error) {
+    console.log("[Verify] Account not initialized or no balance");
+  }
 
-  console.log("\n[Verify] Checking modules...");
+  // Verification tests
+  const verificationResults = {
+    testCoins: false,
+    limitOrderProtocol: false,
+    escrowFactory: false,
+    modules: false,
+  };
 
-  // Check each module
-  const moduleChecks = [
-    { name: "Escrow", address: deployment.modules.escrow },
-    { name: "Escrow Factory", address: deployment.modules.escrowFactory },
-    { name: "Limit Order Protocol", address: deployment.modules.limitOrderProtocol },
-    { name: "Resolver", address: deployment.modules.resolver },
-    { name: "Test USDT", address: deployment.modules.testCoinUSDT },
-    { name: "Test DAI", address: deployment.modules.testCoinDAI },
-  ];
+  // 1. Verify test coins
+  console.log("\n[Verify] Testing coin modules...");
+  try {
+    // Test USDT balance query (should not fail even if 0)
+    await aptos.view({
+      payload: {
+        function: `${packageAddress}::test_coin::get_usdt_balance`,
+        functionArguments: [account.accountAddress],
+      },
+    });
+    
+    // Test DAI balance query
+    await aptos.view({
+      payload: {
+        function: `${packageAddress}::test_coin::get_dai_balance`,
+        functionArguments: [account.accountAddress],
+      },
+    });
+    
+    verificationResults.testCoins = true;
+    console.log("✅ Test coin modules working");
+  } catch (error: any) {
+    console.log("❌ Test coin modules failed:", error.message);
+  }
 
-  let allModulesValid = true;
+  // 2. Verify limit order protocol
+  console.log("\n[Verify] Testing limit order protocol...");
+  try {
+    await aptos.view({
+      payload: {
+        function: `${packageAddress}::limit_order_protocol::get_nonce`,
+        functionArguments: [account.accountAddress, packageAddress],
+      },
+    });
+    
+    verificationResults.limitOrderProtocol = true;
+    console.log("✅ Limit order protocol working");
+  } catch (error: any) {
+    console.log("❌ Limit order protocol failed:", error.message);
+  }
 
-  for (const module of moduleChecks) {
-    try {
-      const [address, moduleName] = module.address.split("::");
-      const moduleData = await client.getAccountModule(address, moduleName);
-      
-      if (moduleData) {
-        console.log(`✅ ${module.name}: Deployed`);
-      }
-    } catch (error) {
-      console.log(`❌ ${module.name}: Not found`);
-      allModulesValid = false;
+  // 3. Verify escrow factory
+  console.log("\n[Verify] Testing escrow factory...");
+  try {
+    // Test getting non-existent escrow (should return 0x0, not fail)
+    const dummyHash = new Array(32).fill(0);
+    await aptos.view({
+      payload: {
+        function: `${packageAddress}::escrow_factory::get_src_escrow_address`,
+        functionArguments: [dummyHash, packageAddress],
+      },
+    });
+    
+    verificationResults.escrowFactory = true;
+    console.log("✅ Escrow factory working");
+  } catch (error: any) {
+    console.log("❌ Escrow factory failed:", error.message);
+  }
+
+  // 4. Verify modules exist
+  console.log("\n[Verify] Checking deployed modules...");
+  try {
+    const accountModules = await aptos.getAccountModules({
+      accountAddress: packageAddress,
+    });
+    
+    const moduleNames = accountModules.map(module => module.abi?.name || 'unknown');
+    console.log("[Verify] Deployed modules:", moduleNames);
+    
+    const expectedModules = ['test_coin', 'limit_order_protocol', 'escrow_factory', 'escrow', 'resolver'];
+    const missingModules = expectedModules.filter(expected => 
+      !moduleNames.some(deployed => deployed === expected)
+    );
+    
+    if (missingModules.length === 0) {
+      verificationResults.modules = true;
+      console.log("✅ All expected modules deployed");
+    } else {
+      console.log("❌ Missing modules:", missingModules);
     }
+  } catch (error: any) {
+    console.log("❌ Module verification failed:", error.message);
   }
 
-  if (!allModulesValid) {
-    console.error("\n[Verify] Some modules are missing. Deployment may have failed.");
-    process.exit(1);
-  }
+  // Summary
+  console.log("\n=== VERIFICATION SUMMARY ===");
+  console.log("Test Coins:", verificationResults.testCoins ? "✅ PASS" : "❌ FAIL");
+  console.log("Limit Order Protocol:", verificationResults.limitOrderProtocol ? "✅ PASS" : "❌ FAIL");
+  console.log("Escrow Factory:", verificationResults.escrowFactory ? "✅ PASS" : "❌ FAIL");
+  console.log("Modules:", verificationResults.modules ? "✅ PASS" : "❌ FAIL");
 
-  // Check account resources
-  console.log("\n[Verify] Checking account resources...");
+  const allPassed = Object.values(verificationResults).every(result => result);
   
-  try {
-    const resources = await client.getAccountResources(deployment.deployer);
-    console.log(`[Verify] Found ${resources.length} resources`);
-
-    // Check for specific resources
-    const expectedResources = [
-      "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>",
-      `${deployment.deployer}::escrow::EscrowEvents`,
-      `${deployment.deployer}::escrow_factory::EscrowFactory`,
-      `${deployment.deployer}::escrow_factory::FactoryEvents`,
-      `${deployment.deployer}::limit_order_protocol::OrderBook`,
-      `${deployment.deployer}::limit_order_protocol::OrderEvents`,
-      `${deployment.deployer}::resolver::ResolverRegistry`,
-      `${deployment.deployer}::resolver::ResolverEvents`,
-    ];
-
-    for (const resourceType of expectedResources) {
-      const resource = resources.find(r => r.type === resourceType);
-      if (resource) {
-        console.log(`✅ Resource: ${resourceType.split("::").pop()}`);
-      } else {
-        console.log(`❌ Missing: ${resourceType.split("::").pop()}`);
-      }
-    }
-
-    // Check coin stores for test tokens
-    const usdtStore = resources.find(r => r.type === `0x1::coin::CoinStore<${deployment.deployer}::test_coin::USDT>`);
-    const daiStore = resources.find(r => r.type === `0x1::coin::CoinStore<${deployment.deployer}::test_coin::DAI>`);
-
-    if (usdtStore) {
-      console.log(`✅ USDT Balance: ${usdtStore.data.coin.value}`);
-    }
-    if (daiStore) {
-      console.log(`✅ DAI Balance: ${daiStore.data.coin.value}`);
-    }
-
-  } catch (error) {
-    console.error("[Verify] Failed to fetch account resources:", error.message);
+  if (allPassed) {
+    console.log("\n🎉 ALL VERIFICATIONS PASSED!");
+    console.log("Your Aptos deployment is ready for cross-chain swaps.");
+    console.log(`Explorer: https://explorer.aptoslabs.com/account/${packageAddress}?network=${network}`);
+  } else {
+    console.log("\n⚠️  SOME VERIFICATIONS FAILED");
+    console.log("Please check the errors above and redeploy if necessary.");
+    process.exit(1);
   }
 
-  // Test view functions
-  console.log("\n[Verify] Testing view functions...");
-
-  try {
-    // Test escrow factory
-    const escrowCount = await client.view({
-      function: `${deployment.deployer}::escrow_factory::get_escrow_count`,
-      type_arguments: [],
-      arguments: [],
-    });
-    console.log(`✅ Escrow count: ${escrowCount[0]}`);
-
-    // Test order book
-    const orderCount = await client.view({
-      function: `${deployment.deployer}::limit_order_protocol::get_order_count`,
-      type_arguments: [],
-      arguments: [],
-    });
-    console.log(`✅ Order count: ${orderCount[0]}`);
-
-    // Test resolver registry
-    const resolverCount = await client.view({
-      function: `${deployment.deployer}::resolver::get_resolver_count`,
-      type_arguments: [],
-      arguments: [],
-    });
-    console.log(`✅ Resolver count: ${resolverCount[0]}`);
-
-  } catch (error) {
-    console.error("[Verify] Failed to call view functions:", error.message);
-  }
-
-  console.log("\n[Verify] Deployment verification complete!");
+  return verificationResults;
 }
 
-// Run verification
-verifyDeployment()
-  .catch((error) => {
-    console.error("[Verify] Verification failed:", error);
-    process.exit(1);
-  });
+// Run verification if called directly
+if (require.main === module) {
+  verifyDeployment().catch(console.error);
+}
+
+export { verifyDeployment };
