@@ -13,8 +13,6 @@ contract Deploy is Script {
         
         address resolver0 = vm.envAddress("RESOLVER_WALLET_0");
         address resolver1 = vm.envAddress("RESOLVER_WALLET_1");
-        address resolver2 = vm.envAddress("RESOLVER_WALLET_2");
-        address resolver3 = vm.envAddress("RESOLVER_WALLET_3");
         
         vm.startBroadcast(deployerPrivateKey);
         
@@ -26,18 +24,12 @@ contract Deploy is Script {
         UniteEscrowFactory factory = new UniteEscrowFactory(deployer);
         console.log("UniteEscrowFactory:", address(factory));
         
-        // Deploy 4 UniteResolver contracts
+        // Deploy 2 UniteResolver contracts
         UniteResolver resolver0Contract = new UniteResolver(factory, lop, resolver0);
         console.log("UniteResolver0:", address(resolver0Contract));
         
         UniteResolver resolver1Contract = new UniteResolver(factory, lop, resolver1);
         console.log("UniteResolver1:", address(resolver1Contract));
-        
-        UniteResolver resolver2Contract = new UniteResolver(factory, lop, resolver2);
-        console.log("UniteResolver2:", address(resolver2Contract));
-        
-        UniteResolver resolver3Contract = new UniteResolver(factory, lop, resolver3);
-        console.log("UniteResolver3:", address(resolver3Contract));
         
         vm.stopBroadcast();
         

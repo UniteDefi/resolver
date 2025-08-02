@@ -29,9 +29,46 @@
     "eth_sepolia": {
       "chainId": 11155111,
       "name": "Ethereum Sepolia",
-      "UniteLimitOrderProtocol": "0xd5C22ee895b3bB83F4f11e5e8249c477431b9A12",
-      "UniteEscrowFactory": "0xb6846E0b849109c10e07093fBB0CAb901FCB1f9a",
-      "UniteResolver": "0x1dbE5e63D734707eB7c6D4608c968AFe6B35A233"
+      "UniteLimitOrderProtocol": "0x7871F66B42959cA21a1E0f1184Ce17Cd5d4b4Cf8",
+      "UniteEscrowFactory": "0xcD0c8F55f7131F62B86728d13EeCb683091A7Ee1",
+      "UniteResolver0": "0xbe4eEaBd99f8efC30eDCda8D3ff1ac7435dBEF0a",
+      "UniteResolver1": "0x432F056De2D597FA9205731671472Fc22ab9F392",
+      "MockUSDT": "0x0813210DE316379FaEc640AB2bab918385e2b269",
+      "MockDAI": "0xf3BABa977445A991B0017f57C84b8922Bce4494E",
+      "MockWrappedNative": "0xA54a2868D24D3D370E3cDF320471705c26C4432C"
+    },
+    "etherlink_testnet": {
+      "chainId": 128123,
+      "name": "Etherlink Testnet",
+      "UniteLimitOrderProtocol": "0xF05fC725206A9D96AF8a5e6A55665C1e9B35Cea0",
+      "UniteEscrowFactory": "0x06300658371f2303313b9DaCDD0106D05b40f168",
+      "UniteResolver0": "0x4f8fff737827419CD631699054060fB84098fff0",
+      "UniteResolver1": "0x1dF7C15a516133ac77fFf1D5502776E8bFec0089",
+      "MockUSDT": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "MockDAI": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "MockWrappedNative": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43"
+    },
+    "monad_testnet": {
+      "chainId": 10143,
+      "name": "Monad Testnet",
+      "UniteLimitOrderProtocol": "0x0b6FB370E9323CE7e97E2F2E7572F7ee24d51dEb",
+      "UniteEscrowFactory": "0x891cA74824A64fC59a4c4d77fdd97908Ec3C99Ed",
+      "UniteResolver0": "0xa25c1Fc7c36b37CB12a8F39056ba0ba1Aea49223",
+      "UniteResolver1": "0xe0d6418957a6b6C5e30A61952F0717BBc425BFe9",
+      "MockUSDT": "0x82aAa15A37FD115e11246A2D5D732629Af15e9D1",
+      "MockDAI": "0x7d76C0D417310e5c0dD8A81Fb5A651a7dE3CD670",
+      "MockWrappedNative": "0xbd2e176Ed6B17802F139d3c4bb5557D5C0EF8f50"
+    },
+    "aurora_testnet": {
+      "chainId": 1313161555,
+      "name": "Aurora Testnet",
+      "UniteLimitOrderProtocol": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "UniteEscrowFactory": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286",
+      "UniteResolver0": "0x9534aA529da38b74577474aBBD5B0296ae834011",
+      "UniteResolver1": "0x694273F2FaE10d36D552086Ce3c6172a8707eF43",
+      "MockUSDT": "0x66AEACCcF67b99E96831f60F821377010aF9B763",
+      "MockDAI": "0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc",
+      "MockWrappedNative": "0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286"
     }
   }
 }

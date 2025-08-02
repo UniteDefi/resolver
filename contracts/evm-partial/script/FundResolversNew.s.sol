@@ -1,0 +1,163 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.23;
+
+import "forge-std/Script.sol";
+
+interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
+
+contract FundResolversNew is Script {
+    // Mock token amounts to transfer
+    uint256 constant USDT_AMOUNT = 10000 * 10**6; // 10k USDT (6 decimals)
+    uint256 constant DAI_AMOUNT = 10000 * 10**18; // 10k DAI (18 decimals)
+    
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
+        address testUser = vm.envAddress("TEST_USER_ADDRESS");
+        
+        // Only fund 2 resolvers
+        address resolver0 = vm.envAddress("RESOLVER_WALLET_0");
+        address resolver1 = vm.envAddress("RESOLVER_WALLET_1");
+        
+        console.log("Funding resolvers with deployer:", deployer);
+        console.log("Deployer balance:", deployer.balance);
+        console.log("Chain ID:", block.chainid);
+        
+        vm.startBroadcast(deployerPrivateKey);
+        
+        // Get native token amount based on chain
+        uint256 nativeAmount = getNativeAmountForChain();
+        
+        // Send native tokens to resolvers
+        if (address(resolver0).balance < nativeAmount) {
+            payable(resolver0).transfer(nativeAmount);
+            console.log("Sent", nativeAmount, "native tokens to Resolver 0");
+        }
+        
+        if (address(resolver1).balance < nativeAmount) {
+            payable(resolver1).transfer(nativeAmount);
+            console.log("Sent", nativeAmount, "native tokens to Resolver 1");
+        }
+        
+        // Send smaller amount to test user
+        uint256 testUserAmount = nativeAmount / 2;
+        if (address(testUser).balance < testUserAmount) {
+            payable(testUser).transfer(testUserAmount);
+            console.log("Sent", testUserAmount, "native tokens to Test User");
+        }
+        
+        // Get mock token addresses from deployments
+        (address mockUSDT, address mockDAI, ) = getMockTokenAddresses();
+        
+        if (mockUSDT != address(0)) {
+            // Transfer USDT to resolvers and test user (deployer already has tokens)
+            IERC20(mockUSDT).transfer(resolver0, USDT_AMOUNT);
+            IERC20(mockUSDT).transfer(resolver1, USDT_AMOUNT);
+            IERC20(mockUSDT).transfer(testUser, USDT_AMOUNT / 2);
+            console.log("Transferred USDT to resolvers and test user");
+        }
+        
+        if (mockDAI != address(0)) {
+            // Transfer DAI to resolvers and test user (deployer already has tokens)
+            IERC20(mockDAI).transfer(resolver0, DAI_AMOUNT);
+            IERC20(mockDAI).transfer(resolver1, DAI_AMOUNT);
+            IERC20(mockDAI).transfer(testUser, DAI_AMOUNT / 2);
+            console.log("Transferred DAI to resolvers and test user");
+        }
+        
+        vm.stopBroadcast();
+        
+        console.log("\n=== FUNDING COMPLETE ===");
+        console.log("Funded Resolver 0:", resolver0);
+        console.log("Funded Resolver 1:", resolver1);
+        console.log("Funded Test User:", testUser);
+    }
+    
+    function getNativeAmountForChain() internal view returns (uint256) {
+        uint256 chainId = block.chainid;
+        
+        // Expensive chains - minimal amounts
+        if (chainId == 11155111) return 0.001 ether; // eth_sepolia
+        if (chainId == 41454) return 0.005 ether; // monad_testnet
+        if (chainId == 2424) return 0.005 ether; // injective_testnet
+        
+        // Medium cost chains
+        if (chainId == 97) return 0.01 ether; // bnb_testnet
+        if (chainId == 11155420) return 0.01 ether; // op_sepolia
+        if (chainId == 80002) return 0.01 ether; // polygon_amoy
+        if (chainId == 1313161555) return 0.01 ether; // aurora_testnet
+        
+        // Cheaper chains
+        return 0.05 ether; // Default for other chains
+    }
+    
+    function getMockTokenAddresses() internal view returns (address usdt, address dai, address wrapped) {
+        uint256 chainId = block.chainid;
+        
+        // Ethereum Sepolia
+        if (chainId == 11155111) {
+            return (
+                0x0813210DE316379FaEc640AB2bab918385e2b269, // MockUSDT
+                0xf3BABa977445A991B0017f57C84b8922Bce4494E, // MockDAI
+                0xA54a2868D24D3D370E3cDF320471705c26C4432C  // MockWrappedNative
+            );
+        }
+        
+        // Etherlink Testnet
+        if (chainId == 128123) {
+            return (
+                0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286, // MockUSDT
+                0x9534aA529da38b74577474aBBD5B0296ae834011, // MockDAI
+                0x694273F2FaE10d36D552086Ce3c6172a8707eF43  // MockWrappedNative
+            );
+        }
+        
+        // Monad Testnet
+        if (chainId == 10143) {
+            return (
+                0x82aAa15A37FD115e11246A2D5D732629Af15e9D1, // MockUSDT
+                0x7d76C0D417310e5c0dD8A81Fb5A651a7dE3CD670, // MockDAI
+                0xbd2e176Ed6B17802F139d3c4bb5557D5C0EF8f50  // MockWrappedNative
+            );
+        }
+        
+        // Aurora Testnet
+        if (chainId == 1313161555) {
+            return (
+                0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9, // MockUSDT
+                0x66AEACCcF67b99E96831f60F821377010aF9B763, // MockDAI
+                0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc  // MockWrappedNative
+            );
+        }
+        
+        // Optimism Sepolia
+        if (chainId == 11155420) {
+            return (
+                0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9, // MockUSDT
+                0x66AEACCcF67b99E96831f60F821377010aF9B763, // MockDAI
+                0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc  // MockWrappedNative
+            );
+        }
+        // Polygon Amoy
+        if (chainId == 80002) {
+            return (
+                0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc, // MockUSDT
+                0x4E7c0b62EBDBFc0bC02e47FCFD517A5Ca22D7286, // MockDAI
+                0x9534aA529da38b74577474aBBD5B0296ae834011  // MockWrappedNative
+            );
+        }
+        // Scroll Sepolia
+        if (chainId == 534351) {
+            return (
+                0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9, // MockUSDT
+                0x66AEACCcF67b99E96831f60F821377010aF9B763, // MockDAI
+                0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc  // MockWrappedNative
+            );
+        }
+                                // Token addresses will be populated after deployment
+        return (address(0), address(0), address(0));
+    }
+}

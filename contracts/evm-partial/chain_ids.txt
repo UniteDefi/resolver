@@ -1,0 +1,17 @@
+Chain IDs Reference:
+==================
+eth_sepolia: 11155111 ✓
+etherlink_testnet: 128123
+monad_testnet: 41454 (need to verify)
+injective_testnet: 2424 (need to verify)
+aurora_testnet: 1313161555
+bnb_testnet: 97
+op_sepolia: 11155420
+polygon_amoy: 80002
+scroll_sepolia: 534351
+celo_alfajores: 44787
+unichain_sepolia: 1301
+flow_testnet: 545
+sei_testnet: 713715
+
+Note: Some chain IDs may need verification before deployment
