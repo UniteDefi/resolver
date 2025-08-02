@@ -1,0 +1,26 @@
+{
+  "testnet": {
+    "escrowFactory": "",
+    "limitOrderProtocol": "",
+    "resolver": "",
+    "mockUsdc": "",
+    "deployedAt": "",
+    "deployer": ""
+  },
+  "devnet": {
+    "escrowFactory": "",
+    "limitOrderProtocol": "",
+    "resolver": "",
+    "mockUsdc": "",
+    "deployedAt": "",
+    "deployer": ""
+  },
+  "mainnet": {
+    "escrowFactory": "",
+    "limitOrderProtocol": "",
+    "resolver": "",
+    "mockUsdc": "",
+    "deployedAt": "",
+    "deployer": ""
+  }
+}
