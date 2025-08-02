@@ -1,0 +1,4 @@
+name = "unite-defi/cardano-contracts"
+version = "1.0.0"
+description = "Cross-chain HTLC implementation for Cardano <> EVM swaps"
+license = "MIT"
