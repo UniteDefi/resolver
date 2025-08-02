@@ -1,0 +1,317 @@
+#include "imports/stdlib.fc";
+#include "imports/constants.fc";
+#include "imports/jetton-utils.fc";
+
+;; Unite Resolver Contract
+;; Handles cross-chain transaction coordination and validation
+
+;; Storage structure:
+;; slice owner_address
+;; dict active_orders (order_hash -> order_details)
+;; dict resolved_orders (order_hash -> resolution_data)
+;; dict chain_validators (chain_id -> validator_address)
+;; int resolver_fee_rate (basis points)
+;; int min_stake_amount
+;; dict staked_resolvers (resolver_address -> stake_info)
+
+const int OP_REGISTER_ORDER = 10;
+const int OP_SUBMIT_PROOF = 11;
+const int OP_RESOLVE_ORDER = 12;
+const int OP_STAKE_RESOLVER = 13;
+const int OP_UNSTAKE_RESOLVER = 14;
+const int OP_CHALLENGE_RESOLUTION = 15;
+const int OP_FINALIZE_RESOLUTION = 16;
+
+const int ORDER_STATUS_PENDING = 0;
+const int ORDER_STATUS_VALIDATED = 1;
+const int ORDER_STATUS_RESOLVED = 2;
+const int ORDER_STATUS_DISPUTED = 3;
+const int ORDER_STATUS_FINALIZED = 4;
+
+(slice, cell, cell, cell, int, int, cell) load_data() inline {
+    slice ds = get_data().begin_parse();
+    slice owner = ds~load_msg_addr();
+    cell active_orders = ds~load_dict();
+    cell resolved_orders = ds~load_dict();
+    cell chain_validators = ds~load_dict();
+    int fee_rate = ds~load_uint(16);
+    int min_stake = ds~load_coins();
+    cell staked_resolvers = ds~load_dict();
+    return (owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers);
+}
+
+() save_data(slice owner, cell active_orders, cell resolved_orders, cell chain_validators, 
+            int fee_rate, int min_stake, cell staked_resolvers) impure inline {
+    set_data(begin_cell()
+        .store_slice(owner)
+        .store_dict(active_orders)
+        .store_dict(resolved_orders)
+        .store_dict(chain_validators)
+        .store_uint(fee_rate, 16)
+        .store_coins(min_stake)
+        .store_dict(staked_resolvers)
+        .end_cell());
+}
+
+;; Register a new cross-chain order
+() handle_register_order(slice in_msg_body, slice sender_address) impure {
+    var (owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers) = load_data();
+    
+    int order_hash = in_msg_body~load_uint(256);
+    int src_chain_id = in_msg_body~load_uint(32);
+    int dst_chain_id = in_msg_body~load_uint(32);
+    slice src_token = in_msg_body~load_msg_addr();
+    slice dst_token = in_msg_body~load_msg_addr();
+    int amount = in_msg_body~load_coins();
+    int deadline = in_msg_body~load_uint(32);
+    slice maker = in_msg_body~load_msg_addr();
+    slice taker = in_msg_body~load_msg_addr();
+    
+    ;; Check if order already exists
+    (slice existing_order, int order_exists) = active_orders.udict_get?(256, order_hash);
+    throw_if(ERROR_ESCROW_EXISTS, order_exists);
+    
+    ;; Store order details
+    cell order_data = begin_cell()
+        .store_uint(ORDER_STATUS_PENDING, 8)
+        .store_uint(src_chain_id, 32)
+        .store_uint(dst_chain_id, 32)
+        .store_slice(src_token)
+        .store_slice(dst_token)
+        .store_coins(amount)
+        .store_uint(deadline, 32)
+        .store_slice(maker)
+        .store_slice(taker)
+        .store_uint(now(), 32) ;; registration_time
+        .end_cell();
+    
+    active_orders~udict_set(256, order_hash, order_data.begin_parse());
+    
+    save_data(owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers);
+}
+
+;; Submit proof of transaction on source chain
+() handle_submit_proof(slice in_msg_body, slice sender_address) impure {
+    var (owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers) = load_data();
+    
+    int order_hash = in_msg_body~load_uint(256);
+    int block_height = in_msg_body~load_uint(64);
+    int tx_hash = in_msg_body~load_uint(256);
+    cell proof_data = in_msg_body~load_ref();
+    
+    ;; Get order details
+    (slice order_data, int order_exists) = active_orders.udict_get?(256, order_hash);
+    throw_unless(ERROR_INVALID_STATE, order_exists);
+    
+    int status = order_data~load_uint(8);
+    throw_unless(ERROR_INVALID_STATE, status == ORDER_STATUS_PENDING);
+    
+    ;; Verify resolver is staked
+    (slice stake_info, int resolver_staked) = staked_resolvers.udict_get?(267, sender_address.slice_hash());
+    throw_unless(ERROR_UNAUTHORIZED, resolver_staked);
+    
+    ;; Update order status to validated
+    int src_chain_id = order_data~load_uint(32);
+    int dst_chain_id = order_data~load_uint(32);
+    slice src_token = order_data~load_msg_addr();
+    slice dst_token = order_data~load_msg_addr();
+    int amount = order_data~load_coins();
+    int deadline = order_data~load_uint(32);
+    slice maker = order_data~load_msg_addr();
+    slice taker = order_data~load_msg_addr();
+    int registration_time = order_data~load_uint(32);
+    
+    cell updated_order = begin_cell()
+        .store_uint(ORDER_STATUS_VALIDATED, 8)
+        .store_uint(src_chain_id, 32)
+        .store_uint(dst_chain_id, 32)
+        .store_slice(src_token)
+        .store_slice(dst_token)
+        .store_coins(amount)
+        .store_uint(deadline, 32)
+        .store_slice(maker)
+        .store_slice(taker)
+        .store_uint(registration_time, 32)
+        .store_uint(block_height, 64)
+        .store_uint(tx_hash, 256)
+        .store_ref(proof_data)
+        .store_slice(sender_address) ;; validator
+        .store_uint(now(), 32) ;; validation_time
+        .end_cell();
+    
+    active_orders~udict_set(256, order_hash, updated_order.begin_parse());
+    
+    save_data(owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers);
+}
+
+;; Resolve order and trigger destination chain transaction
+() handle_resolve_order(slice in_msg_body, slice sender_address) impure {
+    var (owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers) = load_data();
+    
+    int order_hash = in_msg_body~load_uint(256);
+    int secret = in_msg_body~load_uint(256);
+    
+    ;; Get order details
+    (slice order_data, int order_exists) = active_orders.udict_get?(256, order_hash);
+    throw_unless(ERROR_INVALID_STATE, order_exists);
+    
+    int status = order_data~load_uint(8);
+    throw_unless(ERROR_INVALID_STATE, status == ORDER_STATUS_VALIDATED);
+    
+    ;; Verify resolver is staked
+    (slice stake_info, int resolver_staked) = staked_resolvers.udict_get?(267, sender_address.slice_hash());
+    throw_unless(ERROR_UNAUTHORIZED, resolver_staked);
+    
+    ;; Move order to resolved
+    int src_chain_id = order_data~load_uint(32);
+    int dst_chain_id = order_data~load_uint(32);
+    slice src_token = order_data~load_msg_addr();
+    slice dst_token = order_data~load_msg_addr();
+    int amount = order_data~load_coins();
+    int deadline = order_data~load_uint(32);
+    slice maker = order_data~load_msg_addr();
+    slice taker = order_data~load_msg_addr();
+    int registration_time = order_data~load_uint(32);
+    int block_height = order_data~load_uint(64);
+    int tx_hash = order_data~load_uint(256);
+    cell proof_data = order_data~load_ref();
+    slice validator = order_data~load_msg_addr();
+    int validation_time = order_data~load_uint(32);
+    
+    cell resolution_data = begin_cell()
+        .store_uint(ORDER_STATUS_RESOLVED, 8)
+        .store_uint(src_chain_id, 32)
+        .store_uint(dst_chain_id, 32)
+        .store_slice(src_token)
+        .store_slice(dst_token)
+        .store_coins(amount)
+        .store_uint(deadline, 32)
+        .store_slice(maker)
+        .store_slice(taker)
+        .store_uint(registration_time, 32)
+        .store_uint(block_height, 64)
+        .store_uint(tx_hash, 256)
+        .store_ref(proof_data)
+        .store_slice(validator)
+        .store_uint(validation_time, 32)
+        .store_uint(secret, 256)
+        .store_slice(sender_address) ;; resolver
+        .store_uint(now(), 32) ;; resolution_time
+        .end_cell();
+    
+    resolved_orders~udict_set(256, order_hash, resolution_data.begin_parse());
+    active_orders~udict_delete?(256, order_hash);
+    
+    save_data(owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers);
+}
+
+;; Stake tokens to become a resolver
+() handle_stake_resolver(slice in_msg_body, int msg_value, slice sender_address) impure {
+    var (owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers) = load_data();
+    
+    throw_unless(ERROR_INSUFFICIENT_FUNDS, msg_value >= min_stake);
+    
+    ;; Check if already staked
+    (slice existing_stake, int already_staked) = staked_resolvers.udict_get?(267, sender_address.slice_hash());
+    
+    int total_stake = msg_value;
+    if (already_staked) {
+        int current_stake = existing_stake~load_coins();
+        total_stake += current_stake;
+    }
+    
+    cell stake_info = begin_cell()
+        .store_coins(total_stake)
+        .store_uint(now(), 32) ;; stake_time
+        .store_uint(0, 32) ;; unstake_request_time (0 = no request)
+        .end_cell();
+    
+    staked_resolvers~udict_set(267, sender_address.slice_hash(), stake_info.begin_parse());
+    
+    save_data(owner, active_orders, resolved_orders, chain_validators, fee_rate, min_stake, staked_resolvers);
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) {
+        return ();
+    }
+    
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        return ();
+    }
+    slice sender_address = cs~load_msg_addr();
+    
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+    
+    if (op == OP_REGISTER_ORDER) {
+        handle_register_order(in_msg_body, sender_address);
+        return ();
+    }
+    
+    if (op == OP_SUBMIT_PROOF) {
+        handle_submit_proof(in_msg_body, sender_address);
+        return ();
+    }
+    
+    if (op == OP_RESOLVE_ORDER) {
+        handle_resolve_order(in_msg_body, sender_address);
+        return ();
+    }
+    
+    if (op == OP_STAKE_RESOLVER) {
+        handle_stake_resolver(in_msg_body, msg_value, sender_address);
+        return ();
+    }
+    
+    throw(0xffff);
+}
+
+;; Get methods
+(int, int, int, slice, slice, int, int, slice, slice, int) get_order_info(int order_hash) method_id {
+    var (_, active_orders, resolved_orders, _, _, _, _) = load_data();
+    
+    ;; Try active orders first
+    (slice order_data, int found) = active_orders.udict_get?(256, order_hash);
+    if (~ found) {
+        ;; Try resolved orders
+        (order_data, found) = resolved_orders.udict_get?(256, order_hash);
+        throw_unless(ERROR_INVALID_STATE, found);
+    }
+    
+    int status = order_data~load_uint(8);
+    int src_chain_id = order_data~load_uint(32);
+    int dst_chain_id = order_data~load_uint(32);
+    slice src_token = order_data~load_msg_addr();
+    slice dst_token = order_data~load_msg_addr();
+    int amount = order_data~load_coins();
+    int deadline = order_data~load_uint(32);
+    slice maker = order_data~load_msg_addr();
+    slice taker = order_data~load_msg_addr();
+    int registration_time = order_data~load_uint(32);
+    
+    return (status, src_chain_id, dst_chain_id, src_token, dst_token, amount, deadline, maker, taker, registration_time);
+}
+
+int get_resolver_stake(slice resolver_address) method_id {
+    var (_, _, _, _, _, _, staked_resolvers) = load_data();
+    
+    (slice stake_info, int found) = staked_resolvers.udict_get?(267, resolver_address.slice_hash());
+    if (found) {
+        return stake_info~load_coins();
+    }
+    return 0;
+}
+
+int is_resolver_active(slice resolver_address) method_id {
+    var (_, _, _, _, _, min_stake, staked_resolvers) = load_data();
+    
+    (slice stake_info, int found) = staked_resolvers.udict_get?(267, resolver_address.slice_hash());
+    if (found) {
+        int stake_amount = stake_info~load_coins();
+        return stake_amount >= min_stake;
+    }
+    return 0;
+}
