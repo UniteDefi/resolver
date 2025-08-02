@@ -1,0 +1,66 @@
+{
+  "evm": {
+    "base_sepolia": {
+      "chainId": 84532,
+      "network": "base-sepolia",
+      "rpcUrl": "https://sepolia.base.org",
+      "UniteLimitOrderProtocol": "0x84159eadE815141727FeE309fDdaaf7BCF36cFF9",
+      "UniteEscrowFactory": "0x4A90D76465E7A2C40a89ef1F53f144C7b0b5fED3",
+      "UniteResolver0": "0x875eF470dffF58acd5903c704DB65D50022eA994",
+      "UniteResolver1": "0x24a330C62b739f1511Ec3D41cbfDA5fCc4DD6Ae6",
+      "UniteResolver2": "0x6e90aB122b10fEad2cAc61c3d362B658d56a273f",
+      "MockUSDT": "0x97a2d8Dfece96252518a4327aFFf40B61A0a025A",
+      "MockDAI": "0x45A3AF79Ad654e75114988Abd92615eD79754eF5",
+      "MockWrappedNative": "0x45A3AF79Ad654e75114988Abd92615eD79754eF5"
+    }
+  },
+  "starknet": {
+    "network": "starknet-sepolia",
+    "chainId": "0x534e5f5345504f4c4941",
+    "rpcUrl": "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
+    "deployer": "0x0422bec5e5fbe0464b5b8889d874737c4cf72fe4f57bb6fb95b5ee688d96555b",
+    "timestamp": "2024-08-03T12:00:00.000Z",
+    "contracts": {
+      "UniteLimitOrderProtocol": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "UniteEscrowFactory": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "UniteEscrow": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "UniteResolver0": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "UniteResolver1": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "MockUSDT": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "MockDAI": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      },
+      "MockWrappedNative": {
+        "classHash": "0x...",
+        "address": "0x...",
+        "deploymentTx": "0x..."
+      }
+    }
+  }
+}
