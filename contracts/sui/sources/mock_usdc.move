@@ -1,94 +1,107 @@
-module mock::mock_usdc {
+module unite::mock_usdc {
+    use sui::coin::{Self, TreasuryCap, Coin};
     use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
-    use sui::coin::{Self, Coin, TreasuryCap};
-    use sui::balance::{Self, Balance};
+    use sui::tx_context::{Self, TxContext};
     use sui::event;
+    use std::option;
 
-    // Mock USDC for testing
-    struct MOCK_USDC has drop {}
+    /// Mock USDC coin type
+    public struct MOCK_USDC has drop {}
 
-    // Faucet for minting test tokens
-    struct Faucet has key {
+    /// Treasury state
+    public struct Treasury has key, store {
         id: UID,
-        treasury: TreasuryCap<MOCK_USDC>,
-        total_supply: u64,
+        cap: TreasuryCap<MOCK_USDC>,
+        admin: address,
     }
 
-    // Events
-    struct TokensMinted has copy, drop {
-        recipient: address,
+    /// Events
+    public struct TokensMinted has copy, drop {
         amount: u64,
+        recipient: address,
     }
 
-    // Initialize mock USDC
+    public struct TokensBurned has copy, drop {
+        amount: u64,
+        from: address,
+    }
+
+    /// Initialize the mock USDC coin
     fun init(witness: MOCK_USDC, ctx: &mut TxContext) {
-        let (treasury, metadata) = coin::create_currency(
+        let (treasury_cap, metadata) = coin::create_currency(
             witness,
-            6, // USDC has 6 decimals
-            b"MUSDC",
-            b"Mock USDC",
-            b"Mock USDC for testing cross-chain swaps",
+            6, // 6 decimals like real USDC
+            b"USDC",
+            b"Mock USD Coin",
+            b"A mock USDC token for testing",
             option::none(),
             ctx
         );
 
-        let faucet = Faucet {
+        let admin = tx_context::sender(ctx);
+
+        let treasury = Treasury {
             id: object::new(ctx),
-            treasury,
-            total_supply: 0,
+            cap: treasury_cap,
+            admin,
         };
 
+        // Share the treasury so anyone can request test tokens
+        transfer::share_object(treasury);
         transfer::public_freeze_object(metadata);
-        transfer::share_object(faucet);
     }
 
-    // Mint tokens for testing
+    /// Mint tokens for testing (anyone can call)
     public fun mint(
-        faucet: &mut Faucet,
+        treasury: &mut Treasury,
         amount: u64,
-        ctx: &mut TxContext,
+        recipient: address,
+        ctx: &mut TxContext
     ): Coin<MOCK_USDC> {
-        let recipient = tx_context::sender(ctx);
-        faucet.total_supply = faucet.total_supply + amount;
-
+        let coin = coin::mint(&mut treasury.cap, amount, ctx);
+        
         event::emit(TokensMinted {
-            recipient,
             amount,
+            recipient,
         });
 
-        coin::mint(&mut faucet.treasury, amount, ctx)
+        coin
     }
 
-    // Mint and transfer to specific address
-    public fun mint_to(
-        faucet: &mut Faucet,
-        recipient: address,
+    /// Mint and transfer tokens
+    public fun mint_and_transfer(
+        treasury: &mut Treasury,
         amount: u64,
-        ctx: &mut TxContext,
+        recipient: address,
+        ctx: &mut TxContext
     ) {
-        let coins = mint(faucet, amount, ctx);
-        transfer::public_transfer(coins, recipient);
+        let coin = mint(treasury, amount, recipient, ctx);
+        transfer::public_transfer(coin, recipient);
     }
 
-    // Get total supply
-    public fun total_supply(faucet: &Faucet): u64 {
-        faucet.total_supply
-    }
-
-    // Burn tokens (for testing cleanup)
+    /// Burn tokens
     public fun burn(
-        faucet: &mut Faucet,
-        coins: Coin<MOCK_USDC>,
+        treasury: &mut Treasury,
+        coin: Coin<MOCK_USDC>,
+        ctx: &mut TxContext
     ) {
-        let amount = coin::value(&coins);
-        faucet.total_supply = faucet.total_supply - amount;
-        coin::burn(&mut faucet.treasury, coins);
+        let amount = coin::value(&coin);
+        coin::burn(&mut treasury.cap, coin);
+        
+        event::emit(TokensBurned {
+            amount,
+            from: tx_context::sender(ctx),
+        });
     }
 
-    #[test_only]
-    public fun init_for_testing(ctx: &mut TxContext) {
-        init(MOCK_USDC {}, ctx);
+    /// Get total supply
+    public fun total_supply(treasury: &Treasury): u64 {
+        coin::total_supply(&treasury.cap)
+    }
+
+    /// Get treasury admin
+    public fun get_admin(treasury: &Treasury): address {
+        treasury.admin
     }
 }
