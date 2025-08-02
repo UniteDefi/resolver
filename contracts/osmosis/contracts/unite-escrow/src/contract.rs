@@ -6,9 +6,9 @@ use cw2::set_contract_version;
 use sha2::{Digest, Sha256};
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, EscrowInstantiateMsg};
+use crate::msg::{ExecuteMsg, QueryMsg, EscrowInstantiateMsg};
 use crate::state::{ESCROW_STATE, RESOLVER_DEPOSITS, EscrowState, ResolverDeposit};
-use crate::types::{Immutables, EscrowType, State};
+use crate::types::{Immutables, State};
 
 const CONTRACT_NAME: &str = "crates.io:unite-escrow";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
