@@ -1,268 +1,308 @@
-import { AptosClient, AptosAccount, Types } from "aptos";
+import {
+  Account,
+  Aptos,
+  AptosConfig,
+  Network,
+  Ed25519PrivateKey,
+  U64,
+  MoveVector,
+} from "@aptos-labs/ts-sdk";
+import * as dotenv from "dotenv";
 
-export class AptosHelpers {
-  constructor(
-    private client: AptosClient,
-    private moduleAddress: string
-  ) {}
+dotenv.config();
 
-  async executeTransaction(
-    account: AptosAccount,
-    payload: Types.EntryFunctionPayload
-  ): Promise<string> {
-    const txnRequest = await this.client.generateTransaction(
-      account.address(),
-      payload
-    );
-    const signedTxn = await this.client.signTransaction(account, txnRequest);
-    const res = await this.client.submitTransaction(signedTxn);
-    await this.client.waitForTransaction(res.hash);
-    return res.hash;
+export interface AptosTestConfig {
+  aptos: Aptos;
+  admin: Account;
+  user: Account;
+  resolvers: Account[];
+  packageAddress: string;
+  network: Network;
+}
+
+export interface Immutables {
+  order_hash: number[];
+  hashlock: number[];
+  maker: string;
+  taker: string;
+  token: string;
+  amount: U64;
+  safety_deposit: U64;
+  timelocks: U64;
+}
+
+export async function setupAptosTest(): Promise<AptosTestConfig> {
+  const network = (process.env.APTOS_NETWORK?.toLowerCase() as Network) || Network.DEVNET;
+  const config = new AptosConfig({ network });
+  const aptos = new Aptos(config);
+
+  // Setup admin account
+  let admin: Account;
+  const privateKey = process.env.APTOS_PRIVATE_KEY;
+  if (privateKey) {
+    admin = Account.fromPrivateKey({
+      privateKey: new Ed25519PrivateKey(privateKey),
+    });
+  } else {
+    admin = Account.generate();
+    await aptos.fundAccount({
+      accountAddress: admin.accountAddress,
+      amount: 100_000_000,
+    });
   }
 
-  async getAccountBalance(
-    address: string,
-    coinType: string = "0x1::aptos_coin::AptosCoin"
-  ): Promise<bigint> {
-    const resources = await this.client.getAccountResources(address);
-    const coinStore = resources.find(
-      r => r.type === `0x1::coin::CoinStore<${coinType}>`
-    );
-    return BigInt(coinStore?.data.coin.value || 0);
-  }
+  // Setup test accounts
+  const user = Account.generate();
+  const resolvers = [
+    Account.generate(),
+    Account.generate(),
+    Account.generate(),
+  ];
 
-  async registerCoin(account: AptosAccount, coinType: string): Promise<void> {
-    const payload = {
-      function: "0x1::managed_coin::register",
-      type_arguments: [coinType],
-      arguments: [],
-    };
-    await this.executeTransaction(account, payload);
-  }
+  // Fund all accounts
+  const fundingPromises = [user, ...resolvers].map(account =>
+    aptos.fundAccount({
+      accountAddress: account.accountAddress,
+      amount: 50_000_000,
+    })
+  );
 
-  async transferCoin(
-    sender: AptosAccount,
-    recipient: string,
-    amount: bigint,
-    coinType: string = "0x1::aptos_coin::AptosCoin"
-  ): Promise<string> {
-    const payload = {
-      function: "0x1::coin::transfer",
-      type_arguments: [coinType],
-      arguments: [recipient, amount.toString()],
-    };
-    return await this.executeTransaction(sender, payload);
-  }
+  await Promise.all(fundingPromises);
 
-  generateHashlock(secret: Uint8Array): Uint8Array {
-    const crypto = require("crypto");
-    return crypto.createHash("sha256").update(secret).digest();
-  }
+  return {
+    aptos,
+    admin,
+    user,
+    resolvers,
+    packageAddress: admin.accountAddress.toString(),
+    network,
+  };
+}
 
-  async createEscrow(
-    creator: AptosAccount,
-    dstAddress: string,
-    amount: bigint,
-    hashlock: Uint8Array,
-    timelock: number,
-    escrowId: Uint8Array,
-    coinType: string = "0x1::aptos_coin::AptosCoin"
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::escrow::create_escrow`,
-      type_arguments: [coinType],
-      arguments: [
-        dstAddress,
-        amount.toString(),
-        Array.from(hashlock),
-        timelock.toString(),
-        Array.from(escrowId),
-      ],
-    };
-    return await this.executeTransaction(creator, payload);
-  }
-
-  async withdrawEscrow(
-    withdrawer: AptosAccount,
-    escrowHolder: string,
-    secret: Uint8Array,
-    coinType: string = "0x1::aptos_coin::AptosCoin"
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::escrow::withdraw`,
-      type_arguments: [coinType],
-      arguments: [
-        escrowHolder,
-        Array.from(secret),
-      ],
-    };
-    return await this.executeTransaction(withdrawer, payload);
-  }
-
-  async refundEscrow(
-    refunder: AptosAccount,
-    escrowHolder: string,
-    coinType: string = "0x1::aptos_coin::AptosCoin"
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::escrow::refund`,
-      type_arguments: [coinType],
-      arguments: [escrowHolder],
-    };
-    return await this.executeTransaction(refunder, payload);
-  }
-
-  async getEscrowDetails(
-    escrowHolder: string,
-    coinType: string = "0x1::aptos_coin::AptosCoin"
-  ): Promise<{
-    srcAddress: string;
-    dstAddress: string;
-    amount: bigint;
-    hashlock: Uint8Array;
-    timelock: number;
-    state: number;
-  }> {
-    const result = await this.client.view({
-      function: `${this.moduleAddress}::escrow::get_escrow_details`,
-      type_arguments: [coinType],
-      arguments: [escrowHolder],
+export async function registerForCoin(
+  aptos: Aptos,
+  account: Account,
+  packageAddress: string,
+  coinType: 'usdt' | 'dai'
+): Promise<void> {
+  try {
+    const registerTxn = await aptos.transaction.build.simple({
+      sender: account.accountAddress,
+      data: {
+        function: `${packageAddress}::test_coin::register_${coinType}`,
+        functionArguments: [],
+      },
     });
 
-    return {
-      srcAddress: result[0] as string,
-      dstAddress: result[1] as string,
-      amount: BigInt(result[2] as string),
-      hashlock: new Uint8Array(result[3] as number[]),
-      timelock: Number(result[4]),
-      state: Number(result[5]),
-    };
+    await aptos.signAndSubmitTransaction({
+      signer: account,
+      transaction: registerTxn,
+    }).then(result => aptos.waitForTransaction({
+      transactionHash: result.hash,
+    }));
+  } catch (error: any) {
+    if (!error.message?.includes("ERESOURCE_ALREADY_EXISTS")) {
+      throw error;
+    }
   }
+}
 
-  async registerResolver(
-    resolver: AptosAccount,
-    name: string,
-    feeBps: number
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::resolver::register_resolver`,
-      type_arguments: [],
-      arguments: [
-        Array.from(Buffer.from(name, "utf8")),
-        feeBps.toString(),
+export async function mintTestCoin(
+  aptos: Aptos,
+  admin: Account,
+  recipient: string,
+  amount: string,
+  packageAddress: string,
+  coinType: 'usdt' | 'dai'
+): Promise<void> {
+  const mintTxn = await aptos.transaction.build.simple({
+    sender: admin.accountAddress,
+    data: {
+      function: `${packageAddress}::test_coin::mint_${coinType}`,
+      functionArguments: [
+        recipient,
+        amount,
+        packageAddress,
       ],
-    };
-    return await this.executeTransaction(resolver, payload);
+    },
+  });
+
+  await aptos.signAndSubmitTransaction({
+    signer: admin,
+    transaction: mintTxn,
+  }).then(result => aptos.waitForTransaction({
+    transactionHash: result.hash,
+  }));
+}
+
+export async function getCoinBalance(
+  aptos: Aptos,
+  address: string,
+  packageAddress: string,
+  coinType: 'usdt' | 'dai'
+): Promise<string> {
+  const balance = await aptos.view({
+    payload: {
+      function: `${packageAddress}::test_coin::get_${coinType}_balance`,
+      functionArguments: [address],
+    },
+  });
+  return balance[0] as string;
+}
+
+export async function initializeProtocols(
+  aptos: Aptos,
+  admin: Account,
+  packageAddress: string
+): Promise<void> {
+  const protocols = [
+    'test_coin::initialize_usdt',
+    'test_coin::initialize_dai',
+    'limit_order_protocol::initialize',
+    'escrow_factory::initialize',
+  ];
+
+  for (const protocol of protocols) {
+    try {
+      const initTxn = await aptos.transaction.build.simple({
+        sender: admin.accountAddress,
+        data: {
+          function: `${packageAddress}::${protocol}`,
+          functionArguments: [],
+        },
+      });
+
+      await aptos.signAndSubmitTransaction({
+        signer: admin,
+        transaction: initTxn,
+      }).then(result => aptos.waitForTransaction({
+        transactionHash: result.hash,
+      }));
+    } catch (error: any) {
+      if (!error.message?.includes("ERESOURCE_ALREADY_EXISTS")) {
+        console.warn(`Failed to initialize ${protocol}:`, error.message);
+      }
+    }
   }
+}
 
-  async updateResolver(
-    resolver: AptosAccount,
-    feeBps: number,
-    isActive: boolean
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::resolver::update_resolver`,
-      type_arguments: [],
-      arguments: [feeBps.toString(), isActive],
-    };
-    return await this.executeTransaction(resolver, payload);
+export async function createEscrow<CoinType extends string>(
+  aptos: Aptos,
+  resolver: Account,
+  immutables: Immutables,
+  partialAmount: string,
+  safetyDeposit: string,
+  packageAddress: string,
+  coinType: CoinType,
+  isSource: boolean,
+  srcCancellationTimestamp?: string
+): Promise<string> {
+  const functionName = isSource ? 'create_src_escrow_partial' : 'create_dst_escrow_partial';
+  
+  const args = isSource ? [
+    immutables,
+    partialAmount,
+    safetyDeposit,
+  ] : [
+    immutables,
+    srcCancellationTimestamp || "0",
+    partialAmount,
+    safetyDeposit,
+  ];
+
+  const createTxn = await aptos.transaction.build.simple({
+    sender: resolver.accountAddress,
+    data: {
+      function: `${packageAddress}::escrow_factory::${functionName}`,
+      typeArguments: [`${packageAddress}::test_coin::Test${coinType.toUpperCase()}`],
+      functionArguments: args,
+    },
+  });
+
+  const result = await aptos.signAndSubmitTransaction({
+    signer: resolver,
+    transaction: createTxn,
+  });
+
+  await aptos.waitForTransaction({
+    transactionHash: result.hash,
+  });
+
+  // Return escrow address (would need to be extracted from events in real implementation)
+  return resolver.accountAddress.toString();
+}
+
+export function encodeTimelocks(timelocks: {
+  srcWithdrawal: number;
+  srcPublicWithdrawal: number;
+  srcCancellation: number;
+  srcPublicCancellation: number;
+  dstWithdrawal: number;
+  dstPublicWithdrawal: number;
+  dstCancellation: number;
+}): string {
+  let encoded = 0n;
+  encoded |= BigInt(timelocks.srcWithdrawal & 0xFFFFFFFF);
+  encoded |= BigInt(timelocks.srcPublicWithdrawal & 0xFFFFFFFF) << 32n;
+  encoded |= BigInt(timelocks.srcCancellation & 0xFFFFFFFF) << 64n;
+  encoded |= BigInt(timelocks.srcPublicCancellation & 0xFFFFFFFF) << 96n;
+  encoded |= BigInt(timelocks.dstWithdrawal & 0xFFFFFFFF) << 128n;
+  encoded |= BigInt(timelocks.dstPublicWithdrawal & 0xFFFFFFFF) << 160n;
+  encoded |= BigInt(timelocks.dstCancellation & 0xFFFFFFFF) << 192n;
+  return encoded.toString();
+}
+
+export function createTestImmutables(
+  orderHash: number[],
+  hashlock: number[],
+  maker: string,
+  taker: string,
+  token: string,
+  amount: string,
+  safetyDeposit: string,
+  timelocks: string
+): Immutables {
+  return {
+    order_hash: orderHash,
+    hashlock: hashlock,
+    maker,
+    taker,
+    token,
+    amount: new U64(amount),
+    safety_deposit: new U64(safetyDeposit),
+    timelocks: new U64(timelocks),
+  };
+}
+
+export async function waitForTransaction(
+  aptos: Aptos,
+  txnHash: string,
+  timeoutSecs: number = 30
+): Promise<any> {
+  return aptos.waitForTransaction({
+    transactionHash: txnHash,
+    options: {
+      timeoutSecs,
+    },
+  });
+}
+
+export function formatAmount(amount: string, decimals: number): string {
+  const num = BigInt(amount);
+  const divisor = BigInt(10 ** decimals);
+  const wholePart = num / divisor;
+  const fractionalPart = num % divisor;
+  
+  if (fractionalPart === 0n) {
+    return wholePart.toString();
   }
+  
+  const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+  return `${wholePart}.${fractionalStr}`.replace(/\.?0+$/, '');
+}
 
-  async getResolverInfo(resolverAddress: string): Promise<{
-    name: string;
-    feeBps: number;
-    isActive: boolean;
-    totalResolved: number;
-  }> {
-    const result = await this.client.view({
-      function: `${this.moduleAddress}::resolver::get_resolver_info`,
-      type_arguments: [],
-      arguments: [resolverAddress],
-    });
-
-    return {
-      name: Buffer.from(result[0] as number[]).toString("utf8"),
-      feeBps: Number(result[1]),
-      isActive: result[2] as boolean,
-      totalResolved: Number(result[3]),
-    };
-  }
-
-  async createOrder(
-    maker: AptosAccount,
-    taker: string,
-    makerAsset: string,
-    takerAsset: string,
-    makerAmount: bigint,
-    takerAmount: bigint,
-    salt: bigint,
-    expiry: number
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::limit_order_protocol::create_order`,
-      type_arguments: [],
-      arguments: [
-        taker,
-        makerAsset,
-        takerAsset,
-        makerAmount.toString(),
-        takerAmount.toString(),
-        salt.toString(),
-        expiry.toString(),
-      ],
-    };
-    return await this.executeTransaction(maker, payload);
-  }
-
-  async fillOrder(
-    taker: AptosAccount,
-    orderIndex: number
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::limit_order_protocol::fill_order`,
-      type_arguments: [],
-      arguments: [orderIndex.toString()],
-    };
-    return await this.executeTransaction(taker, payload);
-  }
-
-  async cancelOrder(
-    maker: AptosAccount,
-    orderIndex: number
-  ): Promise<string> {
-    const payload = {
-      function: `${this.moduleAddress}::limit_order_protocol::cancel_order`,
-      type_arguments: [],
-      arguments: [orderIndex.toString()],
-    };
-    return await this.executeTransaction(maker, payload);
-  }
-
-  async getOrderDetails(orderIndex: number): Promise<{
-    maker: string;
-    taker: string;
-    makerAsset: string;
-    takerAsset: string;
-    makerAmount: bigint;
-    takerAmount: bigint;
-    isFilled: boolean;
-    isCancelled: boolean;
-  }> {
-    const result = await this.client.view({
-      function: `${this.moduleAddress}::limit_order_protocol::get_order`,
-      type_arguments: [],
-      arguments: [orderIndex.toString()],
-    });
-
-    return {
-      maker: result[0] as string,
-      taker: result[1] as string,
-      makerAsset: result[2] as string,
-      takerAsset: result[3] as string,
-      makerAmount: BigInt(result[4] as string),
-      takerAmount: BigInt(result[5] as string),
-      isFilled: result[6] as boolean,
-      isCancelled: result[7] as boolean,
-    };
-  }
+export function parseAmount(amount: string, decimals: number): string {
+  const [wholePart, fractionalPart = ''] = amount.split('.');
+  const paddedFractional = fractionalPart.padEnd(decimals, '0').slice(0, decimals);
+  return (BigInt(wholePart) * BigInt(10 ** decimals) + BigInt(paddedFractional)).toString();
 }
