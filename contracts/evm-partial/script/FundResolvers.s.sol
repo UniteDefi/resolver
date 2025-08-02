@@ -2,10 +2,9 @@
 pragma solidity 0.8.23;
 
 import "forge-std/Script.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IERC20 {
-    function transfer(address to, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
+interface IMintableERC20 is IERC20 {
     function mint(address to, uint256 amount) external returns (bool);
 }
 
@@ -48,7 +47,7 @@ contract FundResolvers is Script {
         address mockWrpapedNative = getNativeAddress();
         
         if (mockUSDT != address(0)) {
-            try IERC20(mockUSDT).mint(resolver1, 50000 * 10**6) {
+            try IMintableERC20(mockUSDT).mint(resolver1, 50000 * 10**6) {
                 console.log("Minted 50k USDT to Resolver 1");
             } catch {
                 console.log("Could not mint USDT (not mintable)");
@@ -56,7 +55,7 @@ contract FundResolvers is Script {
         }
         
         if (mockDAI != address(0)) {
-            try IERC20(mockDAI).mint(resolver1, 50000 * 10**18) {
+            try IMintableERC20(mockDAI).mint(resolver1, 50000 * 10**18) {
                 console.log("Minted 50k DAI to Resolver 1");
             } catch {
                 console.log("Could not mint DAI (not mintable)");
