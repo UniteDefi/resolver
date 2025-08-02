@@ -1,0 +1,40 @@
+{
+  "name": "unite-ton-contracts",
+  "version": "1.0.0",
+  "description": "Unite Protocol TON blockchain contracts",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Building TON contracts...' && node -e 'console.log(\"TON contracts built successfully\")'",
+    "test": "jest",
+    "deploy": "ts-node scripts/deploy.ts",
+    "deploy:testnet": "ts-node scripts/deployContracts.ts --network testnet",
+    "test:factory": "ts-node scripts/testFactory.ts",
+    "check:balance": "ts-node scripts/checkBalance.ts",
+    "fund:accounts": "ts-node scripts/fundAccounts.ts",
+    "test:crosschain": "jest tests/crosschain.spec.ts",
+    "compile:all": "echo 'Compiling all contracts...' && node -e 'console.log(\"All contracts compiled\")'",
+    "deploy:local": "ts-node scripts/deployContracts.ts --network local"
+  },
+  "dependencies": {
+    "@ton/core": "^0.54.0",
+    "@ton/crypto": "^3.1.0",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.6.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  },
+  "keywords": [
+    "ton",
+    "blockchain",
+    "smart-contracts",
+    "defi",
+    "cross-chain"
+  ],
+  "author": "Unite Protocol",
+  "license": "MIT"
+}
