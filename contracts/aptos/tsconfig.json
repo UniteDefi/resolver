@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2020",
+    "lib": ["ES2020"],
     "module": "commonjs",
-    "lib": ["ES2022"],
+    "declaration": true,
     "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
@@ -10,9 +11,33 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
-    "types": ["node", "vitest/globals"]
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node", "vitest/globals"],
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./*"],
+      "@tests/*": ["./tests/*"],
+      "@scripts/*": ["./scripts/*"]
+    }
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "scripts/**/*",
+    "tests/**/*",
+    "*.ts",
+    "*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist"
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }
