@@ -137,6 +137,11 @@ dist/
 target/
 out/
 artifacts/
+compiled/
+*.wasm
+*.so
+*.dylib
+*.a
 
 # Environment files
 .env
