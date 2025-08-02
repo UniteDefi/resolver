@@ -165,7 +165,15 @@ contract FundResolversNew is Script {
                 0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc  // MockWrappedNative
             );
         }
-                                        // Token addresses will be populated after deployment
+        // Unichain Sepolia
+        if (chainId == 1301) {
+            return (
+                0x58B1D7d9011235E14C1FF4033875f0fEdA46fDE9, // MockUSDT
+                0x66AEACCcF67b99E96831f60F821377010aF9B763, // MockDAI
+                0x4797b6f76B347cf6c42C2Ae7686909FDE3C3AfBc  // MockWrappedNative
+            );
+        }
+                                                // Token addresses will be populated after deployment
         return (address(0), address(0), address(0));
     }
 }
