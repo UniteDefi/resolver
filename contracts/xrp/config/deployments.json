@@ -1,0 +1,142 @@
+{
+  "networks": {
+    "xrpl_testnet": {
+      "name": "XRPL Testnet",
+      "serverUrl": "wss://s.altnet.rippletest.net:51233",
+      "networkId": 0,
+      "faucetUrl": "https://xrpl.org/xrp-testnet-faucet.html",
+      "explorerUrl": "https://testnet.xrpl.org"
+    },
+    "xrpl_mainnet": {
+      "name": "XRPL Mainnet",
+      "serverUrl": "wss://xrplcluster.com",
+      "networkId": 1,
+      "explorerUrl": "https://livenet.xrpl.org"
+    }
+  },
+  "contracts": {
+    "xrpl_testnet": {
+      "htlc": {
+        "XRPLHTLCFactory": {
+          "type": "typescript_class",
+          "file": "src/htlc/XRPLHTLCFactory.ts",
+          "description": "Core HTLC factory for creating and managing escrows"
+        },
+        "XRPLOrderProtocol": {
+          "type": "typescript_class", 
+          "file": "src/htlc/XRPLOrderProtocol.ts",
+          "description": "Order management and partial fill tracking"
+        }
+      },
+      "resolver": {
+        "XRPLResolver": {
+          "type": "typescript_class",
+          "file": "src/resolver/XRPLResolver.ts", 
+          "description": "Individual resolver for handling escrows"
+        },
+        "XRPLResolverManager": {
+          "type": "typescript_class",
+          "file": "src/resolver/XRPLResolverManager.ts",
+          "description": "Manager for coordinating multiple resolvers"
+        },
+        "CrossChainCoordinator": {
+          "type": "typescript_class",
+          "file": "src/resolver/CrossChainCoordinator.ts",
+          "description": "Main coordinator for cross-chain swaps"
+        }
+      },
+      "test_wallets": {
+        "user": {
+          "address": "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
+          "secret": "sn3nxiW7v8KXzPzAqzyHXbSSKNuN9",
+          "description": "Test user wallet for swaps"
+        },
+        "resolver1": {
+          "address": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", 
+          "secret": "ssPLjTCWqsNKsAKj7vEuYs2bYrqx9",
+          "description": "Test resolver 1"
+        },
+        "resolver2": {
+          "address": "rQhF7xjP8dqQkNzWrBcyEUVqpqY8UYgVoZ",
+          "secret": "ssm7XNB5vZwRfHpX5j8LYzTK8FwXe",
+          "description": "Test resolver 2"
+        },
+        "resolver3": {
+          "address": "rJzHnBJEFQYdoVPwxFGmSeRTqhvD8QwKrL",
+          "secret": "ss3kVZBQELm6WQYvDnhLyDGr9Xk2g",
+          "description": "Test resolver 3"
+        }
+      }
+    }
+  },
+  "cross_chain_bridges": {
+    "base_sepolia_xrpl": {
+      "name": "Base Sepolia ↔ XRPL Bridge",
+      "source_chain": "base_sepolia",
+      "destination_chain": "xrpl_testnet",
+      "supported_assets": {
+        "base_sepolia_to_xrpl": [
+          {
+            "sourceAsset": "0x97a2d8Dfece96252518a4327aFFf40B61A0a025A",
+            "sourceSymbol": "USDT",
+            "sourceDecimals": 6,
+            "destinationAsset": "XRP",
+            "destinationDecimals": 6,
+            "minAmount": "10",
+            "maxAmount": "10000"
+          },
+          {
+            "sourceAsset": "0x6789012345678901234567890123456789012345",
+            "sourceSymbol": "DAI", 
+            "sourceDecimals": 18,
+            "destinationAsset": "XRP",
+            "destinationDecimals": 6,
+            "minAmount": "10",
+            "maxAmount": "10000"
+          }
+        ],
+        "xrpl_to_base_sepolia": [
+          {
+            "sourceAsset": "XRP",
+            "sourceDecimals": 6,
+            "destinationAsset": "0x97a2d8Dfece96252518a4327aFFf40B61A0a025A",
+            "destinationSymbol": "USDT",
+            "destinationDecimals": 6,
+            "minAmount": "10",
+            "maxAmount": "10000"
+          }
+        ]
+      },
+      "timing_constraints": {
+        "xrpl_finish_after": 60,
+        "xrpl_cancel_after": 3600,
+        "evm_claim_deadline": 1800,
+        "evm_refund_deadline": 2700
+      },
+      "fees": {
+        "resolver_fee_percentage": 0.1,
+        "safety_deposit_percentage": 2.0,
+        "network_fee_xrp": "0.000012"
+      }
+    }
+  },
+  "deployment_history": {
+    "v1.0.0": {
+      "timestamp": "2024-01-15T10:00:00Z",
+      "version": "1.0.0",
+      "network": "xrpl_testnet",
+      "components": [
+        "XRPLHTLCFactory",
+        "XRPLOrderProtocol", 
+        "XRPLResolver",
+        "XRPLResolverManager",
+        "CrossChainCoordinator"
+      ],
+      "test_results": {
+        "unit_tests_passed": true,
+        "integration_tests_passed": true,
+        "cross_chain_tests_passed": true
+      }
+    }
+  }
+}
