@@ -1,0 +1,10 @@
+{
+  "packageId": "0x3a3c13baf3c4ea9868afc40ae44ab6521a69a76582a51a4d54093967701a089a",
+  "limitOrderProtocol": "0x58c4d36be991107296ae354480d915c7ab46c0d1c7c84bcfd8f8e0564812136c",
+  "escrowFactory": "0x819afeca7df24fa691e3b1ff0813a00258309411938b9530f5df5cd7c19f967e",
+  "mockUSDC": "0x6157f494fd21d82f88d847cd8a82cf56cc2f7dcf3317faa5f82609357975561b",
+  "transactionDigest": "Au2hhU9ReepBTRLxjEwBkSqvT9FzuRtUuHgn3KUSbNvR",
+  "network": "testnet",
+  "deployedAt": "2025-08-02T20:09:08.672Z",
+  "explorerUrl": "https://suiexplorer.com/txblock/Au2hhU9ReepBTRLxjEwBkSqvT9FzuRtUuHgn3KUSbNvR?network=testnet"
+}
