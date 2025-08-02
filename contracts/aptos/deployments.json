@@ -12,77 +12,35 @@
       "MockUSDT": "0x97a2d8Dfece96252518a4327aFFf40B61A0a025A",
       "MockDAI": "0x45A3AF79Ad654e75114988Abd92615eD79754eF5",
       "MockWrappedNative": "0x67f4840a271fd6f130324F576312eCd806Cc9545"
-    },
-    "arb_sepolia": {
-      "chainId": 421614,
-      "name": "Arbitrum Sepolia",
-      "UniteLimitOrderProtocol": "0xB6E8299b7e652b9634c39c847909BA8eb1aE139a",
-      "UniteEscrowFactory": "0xA608aCAf4d925239691dab7D8D50A681949096e7",
-      "UniteResolver0": "0xd2EdFCc326169378847bAE656faFE3A3879bd614",
-      "UniteResolver1": "0x84EB04A8095DEDec6EB6726f2490a4B82E985bFc",
-      "UniteResolver2": "0xbFA770A14aA17cE07D55b21e84Ef09c2d5AdD959",
-      "UniteResolver3": "0x5a96bc5356b90dED42926227F214d55cEb1C7c5E",
-      "MockUSDT": "0x84159eadE815141727FeE309fDdaaf7BCF36cFF9",
-      "MockDAI": "0x79899508A267fCC3E5F838a488b7eFA2D8f32659",
-      "MockWrappedNative": "0x630b2EBcA37EeE832c1c6982858ec552afc05605"
-    },
-    "eth_sepolia": {
-      "chainId": 11155111,
-      "name": "Ethereum Sepolia",
-      "UniteLimitOrderProtocol": "0xd5C22ee895b3bB83F4f11e5e8249c477431b9A12",
-      "UniteEscrowFactory": "0xb6846E0b849109c10e07093fBB0CAb901FCB1f9a",
-      "UniteResolver": "0x1dbE5e63D734707eB7c6D4608c968AFe6B35A233"
     }
   },
   "aptos": {
     "testnet": {
-      "network": "testnet",
       "chainId": 2,
       "name": "Aptos Testnet",
-      "packageAddress": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c",
-      "limitOrderProtocol": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c",
-      "escrowFactory": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c",
-      "resolver0": "0xb8d5c64dc92eb50fd2dcee6ad402b618a0fea6f56c0d07dc14e7fa5dc641eb6c",
-      "resolver1": "0xd5432082e11d2918f829300507ed476d0b993eaad38b69acf8c6fa0f3c0c4170",
-      "resolver2": "0xa1f62f0c85bd520cb7a0397f1886502b1adef45df54a0baba63a47e8e9bf587a",
-      "resolver3": "0x7036f7ac4a4c3beed9ff9635df4a9b0afd6fa195c0167fb6558cb72470157d93",
-      "testUSDT": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestUSDT",
-      "testDAI": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestDAI"
-    }
-  },
-  "crosschain": {
-    "supported_pairs": [
-      {
-        "source": "evm.base_sepolia",
-        "destination": "aptos.testnet",
-        "tokens": {
-          "MockUSDT": "TestDAI",
-          "MockDAI": "TestUSDT"
-        }
+      "packageAddress": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881",
+      "network": "testnet",
+      "modules": {
+        "escrow": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::escrow",
+        "escrow_factory": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::escrow_factory",
+        "limit_order_protocol": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::limit_order_protocol",
+        "resolver": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::resolver",
+        "test_coin": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin",
+        "test_coin_v2": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin_v2"
       },
-      {
-        "source": "aptos.testnet",
-        "destination": "evm.base_sepolia",
-        "tokens": {
-          "TestUSDT": "MockDAI",
-          "TestDAI": "MockUSDT"
-        }
+      "coins": {
+        "TestUSDT": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin::TestUSDT",
+        "TestDAI": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin::TestDAI",
+        "TestUSDTV2": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin_v2::TestUSDTV2",
+        "TestDAIV2": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin_v2::TestDAIV2"
+      },
+      "deployment_transactions": {
+        "package_deployment": "0x485b56bcfe6886a947eedc0c63d1222190cccbe8439d36c70c858ab306f2082c",
+        "initialize_limit_order_protocol": "0x9db753ede0da0ab55863870b5484e90e89cdf56a27054d4df3c5afd2ec46fa5d",
+        "initialize_escrow_factory": "0x42e755d05b97709da344b2efd07c329c08807c256fb3f896f374c05db3cae9a3",
+        "initialize_usdt": "0xa4050215487eb8a47376e2cd89e075f52c5368d3f329ed4ac29bf474e5611081",
+        "initialize_dai": "0xcf6d9edfc96b9430d9676cbd3c9045dafecb0478e2edebbcd68625e99fcc6929"
       }
-    ],
-    "bridge_config": {
-      "min_amount": "1000000",
-      "max_amount": "1000000000000",
-      "timelock_config": {
-        "src_withdrawal": 0,
-        "src_public_withdrawal": 900,
-        "src_cancellation": 1800,
-        "src_public_cancellation": 3600,
-        "dst_withdrawal": 0,
-        "dst_public_withdrawal": 900,
-        "dst_cancellation": 2700
-      },
-      "safety_deposit_percentage": "0.01",
-      "caller_reward_percentage": "10"
     }
   }
 }
