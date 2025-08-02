@@ -1,0 +1,47 @@
+;; Jetton utilities for Unite Protocol
+
+() send_jettons(slice jetton_master, slice dest_addr, int amount, slice from_addr) impure {
+    ;; Calculate jetton wallet address for sender
+    cell state_init = calculate_jetton_wallet_state_init(from_addr, jetton_master);
+    slice jetton_wallet_addr = calculate_jetton_wallet_address(state_init);
+    
+    ;; Create transfer message
+    cell msg_body = begin_cell()
+        .store_uint(0xf8a7ea5, 32) ;; transfer op
+        .store_uint(0, 64) ;; query_id
+        .store_coins(amount)
+        .store_slice(dest_addr) ;; destination
+        .store_slice(from_addr) ;; response_destination
+        .store_maybe_ref(null()) ;; custom_payload
+        .store_coins(0) ;; forward_ton_amount
+        .store_maybe_ref(null()) ;; forward_payload
+        .end_cell();
+    
+    var msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(jetton_wallet_addr)
+        .store_coins(100000000) ;; 0.1 TON for gas
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_ref(msg_body)
+        .end_cell();
+    
+    send_raw_message(msg, 1);
+}
+
+slice calculate_jetton_wallet_address(cell state_init) inline {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(0, 8)
+        .store_uint(cell_hash(state_init), 256)
+        .end_cell()
+        .begin_parse();
+}
+
+cell calculate_jetton_wallet_state_init(slice owner_addr, slice jetton_master) inline {
+    return begin_cell()
+        .store_uint(0, 2)
+        .store_dict(null())
+        .store_dict(null())
+        .store_uint(0, 1)
+        .end_cell();
+}
