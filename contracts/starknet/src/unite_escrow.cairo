@@ -5,9 +5,9 @@ mod UniteEscrow {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::poseidon::PoseidonTrait;
-    use super::interfaces::iescrow::IEscrow;
-    use super::interfaces::ibase_escrow::{IBaseEscrow, Immutables};
-    use super::libraries::timelocks_lib;
+    use crate::interfaces::iescrow::IEscrow;
+    use crate::interfaces::ibase_escrow::{IBaseEscrow, Immutables};
+    use crate::libraries::timelocks_lib;
 
     component!(path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent);
 
