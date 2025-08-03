@@ -13,7 +13,10 @@
     "fund:accounts": "ts-node scripts/fundAccounts.ts",
     "test:crosschain": "jest tests/crosschain.spec.ts",
     "compile:all": "echo 'Compiling all contracts...' && node -e 'console.log(\"All contracts compiled\")'",
-    "deploy:local": "ts-node scripts/deployContracts.ts --network local"
+    "deploy:local": "ts-node scripts/deployContracts.ts --network local",
+    "compile": "ts-node scripts/compile.ts",
+    "mint:test-tokens": "ts-node scripts/mintTestTokens.ts",
+    "test:full-flow": "ts-node scripts/testFullFlow.ts"
   },
   "dependencies": {
     "@ton/core": "^0.54.0",
