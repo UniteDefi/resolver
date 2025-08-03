@@ -59,7 +59,7 @@ mod MockWrappedNative {
     }
 
     #[abi(embed_v0)]
-    impl MockWrappedNativeImpl of super::super::interfaces::imock_token::IMockToken<ContractState> {
+    impl MockWrappedNativeImpl of crate::interfaces::imock_token::IMockToken<ContractState> {
         fn mint(ref self: ContractState, to: ContractAddress, amount: u256) {
             self.ownable.assert_only_owner();
             self.erc20._mint(to, amount);
@@ -72,7 +72,7 @@ mod MockWrappedNative {
     }
 
     #[abi(embed_v0)]
-    impl WrappedNativeImpl of super::super::interfaces::iwrapped_native::IWrappedNative<ContractState> {
+    impl WrappedNativeImpl of crate::interfaces::iwrapped_native::IWrappedNative<ContractState> {
         fn deposit(ref self: ContractState) {
             // In StarkNet, we can't receive ETH directly like in Ethereum
             // This is a simplified mock implementation
