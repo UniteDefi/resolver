@@ -3,12 +3,12 @@ mod UniteResolver {
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use super::interfaces::iescrow_factory::{IEscrowFactoryDispatcher, IEscrowFactoryDispatcherTrait};
-    use super::interfaces::iunite_order_protocol::{IUniteOrderProtocolDispatcher, IUniteOrderProtocolDispatcherTrait};
-    use super::interfaces::iorder_mixin::{IOrderMixinDispatcher, IOrderMixinDispatcherTrait, TakerTraits};
-    use super::interfaces::iescrow::{IEscrowDispatcher, IEscrowDispatcherTrait};
-    use super::interfaces::ibase_escrow::Immutables;
-    use super::interfaces::iunite_order::Order;
+    use crate::interfaces::iescrow_factory::{IEscrowFactoryDispatcher, IEscrowFactoryDispatcherTrait};
+    use crate::interfaces::iunite_order_protocol::{IUniteOrderProtocolDispatcher, IUniteOrderProtocolDispatcherTrait};
+    use crate::interfaces::iorder_mixin::{IOrderMixinDispatcher, IOrderMixinDispatcherTrait, TakerTraits};
+    use crate::interfaces::iescrow::{IEscrowDispatcher, IEscrowDispatcherTrait};
+    use crate::interfaces::ibase_escrow::Immutables;
+    use crate::interfaces::iunite_order::Order;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -72,7 +72,7 @@ mod UniteResolver {
     }
 
     #[abi(embed_v0)]
-    impl UniteResolverImpl of super::interfaces::iunite_resolver::IUniteResolver<ContractState> {
+    impl UniteResolverImpl of crate::interfaces::iunite_resolver::IUniteResolver<ContractState> {
         fn deploy_src_compact_partial(
             ref self: ContractState,
             immutables: Immutables,
