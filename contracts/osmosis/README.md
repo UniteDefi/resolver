@@ -1,95 +1,175 @@
-# Unite Osmosis Cross-Chain Contracts
+# Unite Osmosis Contracts
 
-This repository contains the Osmosis implementation of Unite's cross-chain swap protocol, enabling seamless swaps between EVM and Cosmos-based chains.
-
-## Architecture
-
-- **UniteOrderProtocol**: Manages cross-chain swap orders with Dutch auction pricing
-- **UniteEscrowFactory**: Creates and manages HTLC escrow contracts
-- **UniteEscrow**: HTLC implementation with timelock and safety deposit mechanisms
-- **UniteResolver**: Facilitates cross-chain swaps for resolvers
+Cross-chain swap smart contracts for Osmosis blockchain. Supports bi-directional swaps with EVM chains using Dutch auction pricing and HTLC mechanisms.
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- Rust 1.70+
-- Docker (for local testing)
-- CosmWasm 1.5+
-
-### 4-Command Setup
-
-Run these commands from `contracts/osmosis/`:
-
 ```bash
-# 1. Install dependencies and build contracts
-npm install && make build
+# 1. Install dependencies
+yarn install
 
-# 2. Deploy to Osmosis testnet
-npm run deploy:testnet
+# 2. Build contracts  
+cargo build --release --target wasm32-unknown-unknown
 
-# 3. Setup cross-chain environment
-npm run setup:cross-chain
+# 3. Deploy all contracts
+npm run deploy:all
 
-# 4. Run cross-chain tests
-npm run test:integration
+# 4. Fund test wallets
+npm run fund:all
+
+# 5. Run complete test suite
+npm test
 ```
 
-### Environment Setup
+## Scripts
 
-1. Copy `.env.example` to `.env`
-2. Fill in your mnemonics and RPC URLs
-3. Fund your test accounts:
-   - Osmosis testnet: https://faucet.testnet.osmosis.zone/
-   - Base Sepolia: Use existing faucets
+### Core Scripts
+- `npm run deploy:all` - Deploy all contracts to testnet
+- `npm run fund:all` - Fund all wallets with OSMO and test tokens
+- `npm run check:all` - Check wallet balances and readiness
+- `npm test` - Run complete cross-chain test flow
 
-### Testing
+### Build & Development  
+- `npm run build` - Build all WASM contracts
+- `npm run clean` - Clean build artifacts
+- `npm run check` - Run cargo checks
+- `npm run lint` - Run ESLint
+- `npm run format` - Format code with Prettier
+
+### Local Development
+- `npm run start:local` - Start local Osmosis node (Docker)
+- `npm run stop:local` - Stop local node
+- `npm run setup:wallet` - Generate new test wallet
+
+## Environment Setup
+
+Create `.env` file:
 
 ```bash
-# Unit tests
+# Osmosis Testnet
+OSMO_TESTNET_RPC=https://rpc.testnet.osmosis.zone
+OSMO_TESTNET_MNEMONIC="your deployer mnemonic"
+
+# Test Wallets
+OSMO_USER_MNEMONIC="user wallet mnemonic"
+OSMO_RESOLVER_MNEMONIC_0="resolver 0 mnemonic"
+OSMO_RESOLVER_MNEMONIC_1="resolver 1 mnemonic" 
+OSMO_RESOLVER_MNEMONIC_2="resolver 2 mnemonic"
+
+# Optional: Funding configuration
+FUND_TARGETS=all
+FUND_AMOUNT=5000000
+TOKEN_AMOUNT=10000000000
+```
+
+## Contract Architecture
+
+### Core Contracts
+- **UniteOrderProtocol** - Cross-chain order hash generation
+- **UniteEscrowFactory** - Factory for deploying escrow instances
+- **UniteEscrow** - HTLC escrow with partial fills
+- **UniteResolver** - Dutch auction integration and order filling
+- **TestToken** - ERC20-like test token (TUSDT)
+
+### Key Features
+- ✅ Cross-chain order hash consistency (EVM ↔ Osmosis)
+- ✅ Dutch auction pricing with linear decay
+- ✅ Partial fills supporting multiple resolvers
+- ✅ HTLC atomic swaps with time locks
+- ✅ Constant safety deposits per resolver
+- ✅ Bi-directional swap support
+
+## Testing
+
+Single comprehensive test file matches EVM structure:
+
+```bash
+# Run complete flow test
 npm test
 
-# Cross-chain integration tests
-npm run test:integration
+# Watch mode
+npm run test:watch
 
-# With coverage
+# Coverage report
 npm run test:coverage
 ```
 
-### Local Development
+Test covers:
+- Contract deployment verification
+- Wallet balance checks
+- Order creation and signing
+- Multi-resolver partial fills
+- Dutch auction price calculation
+- HTLC secret revelation
+- Cross-chain withdrawal simulation
 
+## Deployment Structure
+
+Contracts deploy in this order:
+1. Test Token (TUSDT)
+2. Order Protocol
+3. Escrow Code (stored)
+4. Escrow Factory
+5. Resolver Contracts (0, 1, 2)
+
+Results saved to `deployments.json` in EVM-compatible format.
+
+## Troubleshooting
+
+### Common Issues
+
+**"WASM files not found"**
 ```bash
-# Start local Osmosis node
-npm run start:local
-
-# Deploy to local node
-OSMO_TESTNET_RPC=http://localhost:26657 npm run deploy:testnet
-
-# Stop local node
-npm run stop:local
+cargo build --release --target wasm32-unknown-unknown
 ```
 
-## Cross-Chain Flow
+**"Insufficient balance"**
+- Get testnet OSMO: https://faucet.testnet.osmosis.zone/
+- Check balances: `npm run check:all`
 
-1. **Order Creation**: User creates swap order on source chain
-2. **Resolver Commitment**: Resolvers deploy escrows with safety deposits
-3. **Fund Locking**: Tokens are locked in escrows on both chains
-4. **Secret Reveal**: User reveals secret to claim tokens
-5. **Settlement**: Resolvers claim their tokens using the revealed secret
+**"deployments.json not found"**
+```bash
+npm run deploy:all
+```
 
-## Contract Addresses
+**"Mnemonic not set"**
+- Check all required mnemonics in `.env`
+- Generate new wallet: `npm run setup:wallet`
 
-After deployment, addresses are saved in `deployments.json`.
+### Gas Issues
+- Default gas price: 0.025uosmo
+- Increase if transactions fail
+- Check deployer has >10 OSMO
 
-## Contributing
+### Network Issues
+- Default RPC: https://rpc.testnet.osmosis.zone
+- Try alternative RPC if connection fails
+- Check Osmosis testnet status
 
-1. Install dependencies: `npm install`
-2. Build contracts: `make build`
-3. Run tests: `npm test`
-4. Format code: `npm run format`
-5. Lint: `npm run lint`
+## Cross-Chain Integration
+
+### Order Hash Compatibility
+- Uses deterministic address normalization
+- SHA256 hashing for consistency
+- Supports Osmosis ↔ EVM mapping
+
+### Safety Deposits
+- **Constant** amount per resolver (not proportional)
+- Default: 0.01 OSMO per resolver
+- Returned on successful completion
+
+### Dutch Auction
+- Linear price decay over time
+- Start price > End price
+- Real-time price calculation in fillOrder
+
+## Links
+
+- **Osmosis Testnet Explorer**: https://testnet.mintscan.io/osmosis-testnet
+- **Testnet Faucet**: https://faucet.testnet.osmosis.zone/
+- **CosmWasm Docs**: https://docs.cosmwasm.com/
+- **Osmosis Docs**: https://docs.osmosis.zone/
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT
