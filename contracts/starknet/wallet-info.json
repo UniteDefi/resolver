@@ -1,17 +1,37 @@
 {
   "network": "starknet-sepolia",
-  "address": "0x7eef174fd55eb8407485bcc5ab3c03b55fc0c88a2e2679eb03349875466cbf9",
-  "publicKey": "0x7d9d0ca20c61658f72beed921eac2f969dd4a97896733f42d989552b3d31542",
-  "privateKey": "0x4610ddd806759fa9707bee62dbdcc187d049e064f58df71f78d5e4ce8e8bd0b",
-  "classHash": "0x04c6d6cf894f8bc96bb9c525e6853e5483177841f7388f74a46cfda6f028c755",
-  "generatedAt": "2025-08-01T15:42:09.580Z",
-  "status": "NOT_DEPLOYED",
-  "deploymentInstructions": {
-    "step1": "Fund the wallet address with ETH on Starknet Sepolia testnet",
-    "step2": "Run 'yarn deploy:account' to deploy the account contract",
-    "faucets": [
-      "https://faucet.starknet.io/",
-      "https://starknet-faucet.vercel.app/"
-    ]
+  "generatedAt": "2025-08-03T14:24:45.732Z",
+  "accountClassHash": "0x04c6d6cf894f8bc96bb9c525e6853e5483177841f7388f74a46cfda6f028c755",
+  "wallets": {
+    "deployer": {
+      "address": "0x2dc6a468e3f53473ee597d4cd7562bd948ce892470f97c8d92ef48d8a6349eb",
+      "privateKey": "0xb3850f82dd66cfc933967486f403ba68fa895a4308d2a547c75028fc636071",
+      "publicKey": "0x3ff1bca529164a402a30e0fa9d23b316a6ac8608fac64d0ea9fb9f011ddb688"
+    },
+    "user": {
+      "address": "0x1e645f7e4f29ba744f16e756a3c73c7befde825adf29216fb01b695ba22de58",
+      "privateKey": "0x4b8f6ef5c9ff006a29fe702bcf8ec1d0958fbb86f9930783f0acb77197125c",
+      "publicKey": "0x262858688acf2a040d0c9bcc76da283fa16917f4f25be1573833aecbb9d1f19"
+    },
+    "resolver0": {
+      "address": "0xa82a2014dcdcb55e6756b83b91ef624020afbffe9043cb4531db5ea44d1d90",
+      "privateKey": "0x592b724b6770824ab80fa01e6627495835f743312668e641e08ef62786cf05",
+      "publicKey": "0x9543766d6b535a0d77428500c508ba454758840083aa7e768f73e7f354b9e4"
+    },
+    "resolver1": {
+      "address": "0x58c980e116d5d620aba0da0960ff8822ca07c97400802fe96dce88f8ff1ddf6",
+      "privateKey": "0xafd4b7a6eee0470f99f6075aaaf2e9fd390c29c891e907bed3fe0783de34f8",
+      "publicKey": "0x4914349b9fd5b93634f16acb15f075e989baf1cc25f70f9a097f840f4d5d867"
+    },
+    "resolver2": {
+      "address": "0x1b0c8d25026e311cb435a6da693fb2fefaa3a969c391a98b502d6de6aea36be",
+      "privateKey": "0x4a0d9fe7954bc399f9b7a1f1d9b2ebcd07a6077f21f140d8622b7bc3e57eda",
+      "publicKey": "0x1554138db533915a130553b79c8e1bacbc739e1b896f6f71a5c0f3ec21b73ec"
+    },
+    "resolver3": {
+      "address": "0x252b426b57f4c9653c7c765d4fbf03c2757678a1c5611f37ad1e434217b2b4b",
+      "privateKey": "0x00ad662a35f68e041c4d67ec65409940dcc22f9fb310806e10276d663c0ff1",
+      "publicKey": "0x7c376d958a91aa8b410d7aeda1b5e6fef0e7f827ff010571d20b4e82101f082"
+    }
   }
 }
