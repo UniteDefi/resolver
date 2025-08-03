@@ -2,18 +2,70 @@
   "networks": {
     "cardano": {
       "testnet": {
-        "networkId": 0,
-        "protocolMagic": 1097911063,
-        "rpc": "https://cardano-testnet.blockfrost.io/api/v0",
-        "blockfrost": {
-          "projectId": "testnet_project_id_here"
-        },
+        "network": "testnet",
+        "timestamp": "2025-08-03T08:58:52.778Z",
         "validators": {
-          "htlc": {
-            "scriptHash": "addr_test1wphtlc_validator_hash_here",
-            "address": "addr_test1wphtlc_validator_address_here",
-            "compiledCodeFile": "./validators/htlc.plutus"
+          "unite_escrow": {
+            "scriptHash": "placeholder-unite_escrow-hash",
+            "address": "placeholder-unite_escrow-address",
+            "compiledCode": "placeholder-unite_escrow-code"
+          },
+          "unite_factory": {
+            "scriptHash": "placeholder-unite_factory-hash",
+            "address": "placeholder-unite_factory-address",
+            "compiledCode": "placeholder-unite_factory-code"
+          },
+          "unite_resolver": {
+            "scriptHash": "placeholder-unite_resolver-hash",
+            "address": "placeholder-unite_resolver-address",
+            "compiledCode": "placeholder-unite_resolver-code"
+          },
+          "limit_order_protocol": {
+            "scriptHash": "placeholder-limit_order_protocol-hash",
+            "address": "placeholder-limit_order_protocol-address",
+            "compiledCode": "placeholder-limit_order_protocol-code"
+          },
+          "mock_usdt": {
+            "scriptHash": "placeholder-mock_usdt-hash",
+            "address": "placeholder-mock_usdt-address",
+            "compiledCode": "placeholder-mock_usdt-code"
+          },
+          "mock_dai": {
+            "scriptHash": "placeholder-mock_dai-hash",
+            "address": "placeholder-mock_dai-address",
+            "compiledCode": "placeholder-mock_dai-code"
+          },
+          "mock_wrapped_native": {
+            "scriptHash": "placeholder-mock_wrapped_native-hash",
+            "address": "placeholder-mock_wrapped_native-address",
+            "compiledCode": "placeholder-mock_wrapped_native-code"
           }
+        },
+        "tokens": {
+          "mockUSDT": {
+            "symbol": "USDT",
+            "name": "Mock USDT",
+            "decimals": 6,
+            "policy": "placeholder-policy-hash"
+          },
+          "mockDAI": {
+            "symbol": "DAI",
+            "name": "Mock DAI",
+            "decimals": 18,
+            "policy": "placeholder-policy-hash"
+          },
+          "mockWrappedNative": {
+            "symbol": "WADA",
+            "name": "Mock Wrapped ADA",
+            "decimals": 6,
+            "policy": "placeholder-policy-hash"
+          }
+        },
+        "addresses": {
+          "factory": "placeholder-factory-address",
+          "escrow": "placeholder-escrow-address",
+          "resolver": "placeholder-resolver-address",
+          "limitOrder": "placeholder-limit-order-address"
         }
       },
       "mainnet": {
