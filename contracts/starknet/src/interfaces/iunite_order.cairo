@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde, starknet::Store)]
-struct Order {
+pub struct Order {
     salt: u256,
     maker: ContractAddress,
     receiver: ContractAddress,
@@ -20,6 +20,6 @@ struct Order {
 }
 
 #[starknet::interface]
-trait IUniteOrder<TContractState> {
+pub trait IUniteOrder<TContractState> {
     fn hash_order(self: @TContractState, order: Order) -> felt252;
 }
