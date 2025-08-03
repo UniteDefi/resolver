@@ -44,7 +44,7 @@ mod MockUSDT {
     }
 
     #[abi(embed_v0)]
-    impl MockUSDTImpl of super::super::interfaces::imock_token::IMockToken<ContractState> {
+    impl MockUSDTImpl of crate::interfaces::imock_token::IMockToken<ContractState> {
         fn mint(ref self: ContractState, to: ContractAddress, amount: u256) {
             self.ownable.assert_only_owner();
             self.erc20._mint(to, amount);
