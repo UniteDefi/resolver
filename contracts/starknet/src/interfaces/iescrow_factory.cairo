@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 use super::ibase_escrow::Immutables;
 
 #[starknet::interface]
-trait IEscrowFactory<TContractState> {
+pub trait IEscrowFactory<TContractState> {
     fn address_of_escrow_src(self: @TContractState, immutables: Immutables) -> ContractAddress;
     fn address_of_escrow_dst(self: @TContractState, immutables: Immutables) -> ContractAddress;
     fn create_src_escrow(ref self: TContractState, immutables: Immutables) -> ContractAddress;
