@@ -65,13 +65,13 @@ module aptos_addr::test_coin {
 
     // Initialize Test DAI  
     entry public fun initialize_dai(admin: &signer) {
-        let (burn_cap, freeze_cap, mint_cap) = coin::initialize<TestDAI>(
-            admin,
-            string::utf8(b"Test DAI"),
-            string::utf8(b"TDAI"),
-            18, // 18 decimals like real DAI
-            true, // monitor_supply
-        );
+       let (burn_cap, freeze_cap, mint_cap) = coin::initialize<TestDAI>(
+        admin,
+        string::utf8(b"Test DAI"),
+        string::utf8(b"TDAI"),
+        6, // Changed from 18 to 6 decimals
+        true, // monitor_supply
+    );
 
         coin::destroy_freeze_cap(freeze_cap);
 
@@ -86,9 +86,9 @@ module aptos_addr::test_coin {
         };
 
         // Mint initial supply to admin (1M DAI)
-        let initial_coins = coin::mint<TestDAI>(1000000, &capabilities.mint_cap); // 1M DAI (simplified for Move u64)
+       let initial_coins = coin::mint<TestDAI>(1_000_000_000_000, &capabilities.mint_cap); // 1M with 6 decimals
         coin::deposit(signer::address_of(admin), initial_coins);
-        
+    
         move_to(admin, capabilities);
         move_to(admin, store);
     }
