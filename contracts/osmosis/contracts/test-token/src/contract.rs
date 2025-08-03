@@ -33,7 +33,7 @@ pub fn instantiate(
             let cw20_msg = Cw20InstantiateMsg {
                 name: "Mock DAI".to_string(),
                 symbol: "MDAI".to_string(),
-                decimals: 18,
+                decimals: 6,
                 initial_balances: vec![],
                 mint: Some(cw20::MinterResponse {
                     minter: info.sender.to_string(),
