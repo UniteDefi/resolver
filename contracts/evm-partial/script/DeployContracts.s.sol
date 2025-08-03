@@ -31,9 +31,6 @@ contract DeployContracts is Script {
         UniteLimitOrderProtocol lop = new UniteLimitOrderProtocol();
         UniteEscrowFactory factory = new UniteEscrowFactory(deployer);
 
-        console.log("UniteLimitOrderProtocol:", address(lop));
-        console.log("UniteEscrowFactory:", address(factory));
-
         // Deploy Resolver Contracts (each owned by respective resolver)
         UniteResolver resolver0Contract = new UniteResolver(
             factory,
@@ -56,15 +53,19 @@ contract DeployContracts is Script {
             resolver3
         );
 
+        vm.stopBroadcast();
+
+        console.log("\n=== DEPLOYED ADDRESSES ===");
+        console.log("UniteLimitOrderProtocol:", address(lop));
+        console.log("UniteEscrowFactory:", address(factory));
         console.log("UniteResolver0:", address(resolver0Contract));
         console.log("UniteResolver1:", address(resolver1Contract));
         console.log("UniteResolver2:", address(resolver2Contract));
         console.log("UniteResolver3:", address(resolver3Contract));
 
-        vm.stopBroadcast();
-
         // Print JSON for deployments.json (without mock tokens)
         console.log("\n=== COPY TO DEPLOYMENTS.JSON ===");
+        console.log('"', getChainKey(), '": {');
         console.log('  "chainId":', block.chainid, ",");
         console.log('  "name": "', getChainName(), '",');
         console.log(
@@ -97,11 +98,31 @@ contract DeployContracts is Script {
             vm.toString(address(resolver3Contract)),
             '"'
         );
+        console.log("}");
 
-        console.log("\n✅ CONTRACT DEPLOYMENT COMPLETE");
+        console.log(unicode"\n✅ CONTRACT DEPLOYMENT COMPLETE");
         console.log(
             "Note: Mock tokens not deployed. Use existing tokens or deploy separately."
         );
+    }
+
+    function getChainKey() internal view returns (string memory) {
+        uint256 chainId = block.chainid;
+        if (chainId == 84532) return "base_sepolia";
+        if (chainId == 421614) return "arb_sepolia";
+        if (chainId == 11155111) return "eth_sepolia";
+        if (chainId == 128123) return "etherlink_testnet";
+        if (chainId == 10143) return "monad_testnet";
+        if (chainId == 1313161555) return "aurora_testnet";
+        if (chainId == 11155420) return "op_sepolia";
+        if (chainId == 80002) return "polygon_amoy";
+        if (chainId == 534351) return "scroll_sepolia";
+        if (chainId == 44787) return "celo_alfajores";
+        if (chainId == 1301) return "unichain_sepolia";
+        if (chainId == 545) return "flow_testnet";
+        if (chainId == 1328) return "sei_testnet";
+        if (chainId == 1439) return "injective_testnet";
+        return "unknown_chain";
     }
 
     function getChainName() internal view returns (string memory) {
