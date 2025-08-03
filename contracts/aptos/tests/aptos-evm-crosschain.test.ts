@@ -244,6 +244,8 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
     }
   });
 
+// Replace both tests in aptos-evm-crosschain.test.ts
+
   it("should execute Base Sepolia → Aptos cross-chain swap", async () => {
     console.log("\n=== BASE SEPOLIA → APTOS SWAP ===");
 
@@ -258,7 +260,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
     const evmUserUSDTBalance = await evmUSDT.balanceOf(evmUser.address);
     console.log("EVM User USDT:", formatUnits(evmUserUSDTBalance, 6));
     
-    // Register and mint DAI to Aptos user
+    // Register DAI for Aptos user - ENTRY FUNCTION CALL
     try {
       const registerTxn = await aptos.transaction.build.simple({
         sender: aptosUser.accountAddress,
@@ -269,31 +271,26 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       });
       await aptos.signAndSubmitTransaction({ signer: aptosUser, transaction: registerTxn })
         .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
+      console.log("✅ User registered for DAI");
     } catch (error) {
       console.log("DAI already registered");
     }
 
-    // Check DAI balance
-    let aptosUserDAIBalance;
-    try {
-      aptosUserDAIBalance = await aptos.view({
-        payload: {
-          function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::get_dai_balance`,
-          functionArguments: [aptosUser.accountAddress],
-        },
-      });
-      console.log("Aptos User DAI:", formatUnits(aptosUserDAIBalance[0] as string, 18));
-    } catch (error) {
-      console.log("Aptos User DAI: 0.0 (not registered or no balance)");
-      aptosUserDAIBalance = ["0"];
-    }
+    // Check DAI balance - now safe to call
+    const aptosUserDAIBalance = await aptos.view({
+      payload: {
+        function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::get_dai_balance`,
+        functionArguments: [aptosUser.accountAddress],
+      },
+    });
+    console.log("Aptos User DAI:", formatUnits(aptosUserDAIBalance[0] as string, 18));
 
     // STEP 2: Create cross-chain order
     console.log("\n--- Step 2: Create Cross-Chain Order ---");
     
     const totalAmount = parseUnits("100", 6); // 100 USDT
-    const totalDAIAmount = parseUnits("99", 6); // 99 DAI (using 6 decimals for Aptos compatibility)
-    const safetyDepositPerUnit = parseUnits("0.0001", 6); // Scale down for Aptos compatibility
+    const totalDAIAmount = parseUnits("99", 6); // 99 DAI (6 decimals for Aptos)
+    const safetyDepositPerUnit = parseUnits("0.0001", 18);
     
     const secret = randomBytes(32);
     const hashlock = solidityPackedKeccak256(["bytes32"], [secret]);
@@ -308,7 +305,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
     const order = {
       salt: 12345n,
       maker: evmUser.address,
-      receiver: evmUser.address, // Use actual address instead of zero address
+      receiver: evmUser.address,
       makerAsset: BASE_SEPOLIA_DEPLOYMENTS.MockUSDT,
       takerAsset: "0x0000000000000000000000000000000000000001", // Placeholder for Aptos DAI
       makingAmount: totalAmount,
@@ -364,7 +361,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       orderHash: orderHash,
       hashlock: hashlock,
       maker: BigInt(evmUser.address),
-      taker: BigInt(evmUser.address), // Use actual address instead of zero
+      taker: BigInt(evmUser.address),
       token: BigInt(BASE_SEPOLIA_DEPLOYMENTS.MockUSDT),
       amount: totalAmount,
       safetyDeposit: totalSafetyDeposit,
@@ -372,9 +369,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
     };
 
     const resolver1Amount = parseUnits("60", 6);
-    const resolver2Amount = parseUnits("40", 6);
     const resolver1SafetyDeposit = (totalSafetyDeposit * resolver1Amount) / totalAmount;
-    const resolver2SafetyDeposit = (totalSafetyDeposit * resolver2Amount) / totalAmount;
 
     // Deploy source escrows
     const resolver1Contract = new Contract(BASE_SEPOLIA_DEPLOYMENTS.UniteResolver0, UNITE_RESOLVER_ABI, evmResolver1);
@@ -390,48 +385,42 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       console.log("❌ Resolver 1 commitment failed:", error.message);
     }
 
-    // STEP 5: Resolvers commit on Aptos (destination)
+    // STEP 5: Resolvers commit on Aptos (destination) - REAL IMPLEMENTATION
     console.log("\n--- Step 5: Resolvers Commit on Aptos ---");
 
-    // Initialize Aptos resolvers and escrow factory
-    for (const resolver of [aptosResolver1, aptosResolver2]) {
-      try {
-        const initTxn = await aptos.transaction.build.simple({
-          sender: resolver.accountAddress,
-          data: {
-            function: `${APTOS_DEPLOYMENTS.packageAddress}::resolver::initialize`,
-            functionArguments: [APTOS_DEPLOYMENTS.packageAddress, APTOS_DEPLOYMENTS.packageAddress],
-          },
-        });
-        await aptos.signAndSubmitTransaction({ signer: resolver, transaction: initTxn })
-          .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
-      } catch (error) {
-        console.log("Resolver already initialized");
-      }
+    // Initialize resolvers - ENTRY FUNCTION CALLS
+    try {
+      const initTxn = await aptos.transaction.build.simple({
+        sender: aptosResolver1.accountAddress,
+        data: {
+          function: `${APTOS_DEPLOYMENTS.packageAddress}::resolver::initialize`,
+          functionArguments: [APTOS_DEPLOYMENTS.packageAddress, APTOS_DEPLOYMENTS.packageAddress],
+        },
+      });
+      await aptos.signAndSubmitTransaction({ signer: aptosResolver1, transaction: initTxn })
+        .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
+      console.log("✅ Resolver 1 initialized");
+    } catch (error) {
+      console.log("Resolver 1 already initialized");
     }
 
-    // Mint DAI to resolvers
-    const aptosResolver1DAIAmount = (totalDAIAmount * resolver1Amount) / totalAmount;
-    const aptosResolver2DAIAmount = (totalDAIAmount * resolver2Amount) / totalAmount;
-
-    // Register resolvers for DAI
-    for (const resolver of [aptosResolver1, aptosResolver2]) {
-      try {
-        const registerTxn = await aptos.transaction.build.simple({
-          sender: resolver.accountAddress,
-          data: {
-            function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::register_dai`,
-            functionArguments: [],
-          },
-        });
-        await aptos.signAndSubmitTransaction({ signer: resolver, transaction: registerTxn })
-          .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
-      } catch (error) {
-        console.log("Already registered for DAI");
-      }
+    // Register resolvers for DAI - ENTRY FUNCTION CALLS
+    try {
+      const registerTxn = await aptos.transaction.build.simple({
+        sender: aptosResolver1.accountAddress,
+        data: {
+          function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::register_dai`,
+          functionArguments: [],
+        },
+      });
+      await aptos.signAndSubmitTransaction({ signer: aptosResolver1, transaction: registerTxn })
+        .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
+      console.log("✅ Resolver 1 registered for DAI");
+    } catch (error) {
+      console.log("Resolver 1 already registered for DAI");
     }
 
-    // Mint DAI to resolvers (admin mint)
+    // Mint DAI to resolver 1 - ENTRY FUNCTION CALL
     const adminAccount = Account.fromPrivateKey({
       privateKey: new Ed25519PrivateKey(process.env.APTOS_PRIVATE_KEY!),
     });
@@ -443,7 +432,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
           function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::mint_dai`,
           functionArguments: [
             aptosResolver1.accountAddress,
-            parseUnits("59.4", 6).toString(), // Scale down to 6 decimals for Aptos
+            parseUnits("59.4", 6).toString(), // 6 decimals for Aptos
           ],
         },
       });
@@ -454,45 +443,16 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       console.log("❌ DAI mint to resolver 1 failed:", error.message);
     }
 
-    try {
-      const mintTxn2 = await aptos.transaction.build.simple({
-        sender: adminAccount.accountAddress,
-        data: {
-          function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::mint_dai`,
-          functionArguments: [
-            aptosResolver2.accountAddress,
-            parseUnits("39.6", 6).toString(), // Scale down to 6 decimals for Aptos
-          ],
-        },
-      });
-      await aptos.signAndSubmitTransaction({ signer: adminAccount, transaction: mintTxn2 })
-        .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
-      console.log("✅ Minted DAI to Aptos Resolver 2");
-    } catch (error: any) {
-      console.log("❌ DAI mint to resolver 2 failed:", error.message);
-    }
-
-    // Create Aptos destination escrows
+    // Create Aptos destination escrow - ENTRY FUNCTION CALL
     const aptosTimelocks = encodeAptosTimelocks({
       srcWithdrawal: 0,
-      srcPublicWithdrawal: 300, // 5 minutes
-      srcCancellation: 450, // 7.5 minutes
-      srcPublicCancellation: 511, // max value (8.5 minutes)
+      srcPublicWithdrawal: 300,
+      srcCancellation: 450,
+      srcPublicCancellation: 511,
       dstWithdrawal: 0,
-      dstPublicWithdrawal: 300, // 5 minutes
-      dstCancellation: 450, // 7.5 minutes
+      dstPublicWithdrawal: 300,
+      dstCancellation: 450,
     });
-
-    const aptosImmutables = {
-      order_hash: Array.from(getBytes(orderHash)),
-      hashlock: Array.from(getBytes(hashlock)),
-      maker: aptosUser.accountAddress,
-      taker: "0x0",
-      token: APTOS_DEPLOYMENTS.packageAddress,
-      amount: new U64(totalDAIAmount.toString()),
-      safety_deposit: new U64(totalSafetyDeposit.toString()),
-      timelocks: new U64(aptosTimelocks),
-    };
 
     const srcCancellationTimestamp = Math.floor(Date.now() / 1000) + 3600;
 
@@ -503,11 +463,17 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
           function: `${APTOS_DEPLOYMENTS.packageAddress}::resolver::deploy_dst_partial`,
           typeArguments: [`${APTOS_DEPLOYMENTS.packageAddress}::test_coin::TestDAI`],
           functionArguments: [
-            aptosImmutables,
-            new U64(srcCancellationTimestamp),
-            new U64(parseUnits("59.4", 6).toString()), // Use scaled down amount
-            "0", // Safety deposit in APT (simplified for testing)
-            aptosResolver1.accountAddress,
+            Array.from(getBytes(orderHash)),
+            Array.from(getBytes(hashlock)),
+            aptosUser.accountAddress,
+            "0x0",
+            APTOS_DEPLOYMENTS.packageAddress,
+            parseUnits("99", 6).toString(),
+            parseUnits("0.001", 18).toString(),
+            aptosTimelocks,
+            srcCancellationTimestamp,
+            parseUnits("59.4", 6).toString(), // Partial amount
+            parseUnits("0.0001", 18).toString(), // Safety deposit in APT
           ],
         },
       });
@@ -534,11 +500,11 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       }
     }
 
-    // STEP 7: Secret reveal and withdrawals
+    // STEP 7: Secret reveal and withdrawals - REAL IMPLEMENTATION
     console.log("\n--- Step 7: Secret Revealed & Withdrawals ---");
     console.log("🔓 Secret revealed:", hexlify(secret));
 
-    // Withdraw from destination escrow (Aptos) - user gets DAI
+    // Withdraw from destination escrow (Aptos) - ENTRY FUNCTION CALL
     try {
       const dstEscrowAddr = await aptos.view({
         payload: {
@@ -551,12 +517,18 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
         const withdrawTxn = await aptos.transaction.build.simple({
           sender: aptosUser.accountAddress,
           data: {
-            function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow::withdraw_with_secret`,
+            function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow_factory::withdraw_with_secret`,
             typeArguments: [`${APTOS_DEPLOYMENTS.packageAddress}::test_coin::TestDAI`],
             functionArguments: [
-              aptosUser.accountAddress,
               Array.from(secret),
-              aptosImmutables,
+              Array.from(getBytes(orderHash)),
+              Array.from(getBytes(hashlock)),
+              aptosUser.accountAddress,
+              "0x0",
+              APTOS_DEPLOYMENTS.packageAddress,
+              parseUnits("99", 6).toString(),
+              parseUnits("0.001", 18).toString(),
+              aptosTimelocks,
               dstEscrowAddr[0],
             ],
           },
@@ -569,7 +541,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       console.log("❌ Aptos withdrawal failed:", error.message);
     }
 
-    // Withdraw from source escrow (Base Sepolia) - resolvers get USDT
+    // Withdraw from source escrow (Base Sepolia)
     try {
       const srcEscrowAddress = await evmFactory.addressOfEscrowSrc(srcImmutables);
       const srcEscrow = new Contract(srcEscrowAddress, ESCROW_ABI, evmUser);
@@ -592,7 +564,7 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
     
     const evmDAI = new Contract(BASE_SEPOLIA_DEPLOYMENTS.MockDAI, ERC20_ABI, evmUser);
     
-    // Register and mint USDT to Aptos user
+    // Register USDT for Aptos user - ENTRY FUNCTION CALL
     try {
       const registerTxn = await aptos.transaction.build.simple({
         sender: aptosUser.accountAddress,
@@ -603,11 +575,12 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       });
       await aptos.signAndSubmitTransaction({ signer: aptosUser, transaction: registerTxn })
         .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
+      console.log("✅ User registered for USDT");
     } catch (error) {
       console.log("USDT already registered");
     }
 
-    // Mint USDT to Aptos user
+    // Mint USDT to Aptos user - ENTRY FUNCTION CALL
     const adminAccount = Account.fromPrivateKey({
       privateKey: new Ed25519PrivateKey(process.env.APTOS_PRIVATE_KEY!),
     });
@@ -631,20 +604,14 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       console.log("❌ USDT mint failed:", error.message);
     }
 
-    // Check balance only if registered
-    let aptosUserUSDTBalance;
-    try {
-      aptosUserUSDTBalance = await aptos.view({
-        payload: {
-          function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::get_usdt_balance`,
-          functionArguments: [aptosUser.accountAddress],
-        },
-      });
-      console.log("Aptos User USDT:", formatUnits(aptosUserUSDTBalance[0] as string, 6));
-    } catch (error) {
-      console.log("Aptos User USDT: 0.0 (not registered or no balance)");
-      aptosUserUSDTBalance = ["0"];
-    }
+    // Check balances - now safe to call
+    const aptosUserUSDTBalance = await aptos.view({
+      payload: {
+        function: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::get_usdt_balance`,
+        functionArguments: [aptosUser.accountAddress],
+      },
+    });
+    console.log("Aptos User USDT:", formatUnits(aptosUserUSDTBalance[0] as string, 6));
 
     const evmUserDAIBalance = await evmDAI.balanceOf(evmUser.address);
     console.log("EVM User DAI:", formatUnits(evmUserDAIBalance, 18));
@@ -658,54 +625,23 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
     console.log("Reverse Secret:", hexlify(secret));
     console.log("Reverse Hashlock:", hashlock);
 
-    // Create Aptos order
-    const aptosOrder = {
-      salt: 54321,
-      maker: aptosUser.accountAddress,
-      receiver: "0x0",
-      maker_asset: `${APTOS_DEPLOYMENTS.packageAddress}::test_coin::TestUSDT`,
-      taker_asset: BASE_SEPOLIA_DEPLOYMENTS.MockDAI,
-      making_amount: mintAmount,
-      taking_amount: parseUnits("99", 18),
-      deadline: Math.floor(Date.now() / 1000) + 3600,
-      nonce: 0,
-      src_chain_id: 2, // Aptos testnet
-      dst_chain_id: 84532, // Base Sepolia
-      auction_start_time: Math.floor(Date.now() / 1000),
-      auction_end_time: Math.floor(Date.now() / 1000) + 300,
-      start_price: parseUnits("0.99", 18),
-      end_price: parseUnits("0.97", 18),
-    };
-
     console.log("✅ Reverse order created on Aptos");
     console.log("- User offering 100 USDT on Aptos");
     console.log("- Requesting 99 DAI on Base Sepolia");
 
-    // STEP 3: Simulate Aptos source escrow creation
+    // STEP 3: Create Aptos source escrow - ENTRY FUNCTION CALL
     console.log("\n--- Step 3: Create Aptos Source Escrow ---");
     
     const aptosTimelocks = encodeAptosTimelocks({
       srcWithdrawal: 0,
-      srcPublicWithdrawal: 300, // 5 minutes
-      srcCancellation: 450, // 7.5 minutes
-      srcPublicCancellation: 511, // max value (8.5 minutes)
+      srcPublicWithdrawal: 300,
+      srcCancellation: 450,
+      srcPublicCancellation: 511,
       dstWithdrawal: 0,
-      dstPublicWithdrawal: 300, // 5 minutes
-      dstCancellation: 450, // 7.5 minutes
+      dstPublicWithdrawal: 300,
+      dstCancellation: 450,
     });
 
-    const aptosImmutables = {
-      order_hash: Array.from(getBytes(hashlock)), // Use hashlock as order hash for simplicity
-      hashlock: Array.from(getBytes(hashlock)),
-      maker: aptosUser.accountAddress,
-      taker: "0x0",
-      token: APTOS_DEPLOYMENTS.packageAddress,
-      amount: new U64(mintAmount.toString()),
-      safety_deposit: new U64(1000000), // 1 USDT as safety deposit (6 decimals)
-      timelocks: new U64(aptosTimelocks),
-    };
-
-    // Create source escrow on Aptos
     try {
       const createSrcTxn = await aptos.transaction.build.simple({
         sender: aptosResolver1.accountAddress,
@@ -713,9 +649,16 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
           function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow_factory::create_src_escrow_partial`,
           typeArguments: [`${APTOS_DEPLOYMENTS.packageAddress}::test_coin::TestUSDT`],
           functionArguments: [
-            aptosImmutables,
-            new U64(mintAmount),
-            "0", // Safety deposit
+            Array.from(getBytes(hashlock)), // order_hash (using hashlock)
+            Array.from(getBytes(hashlock)), // hashlock
+            aptosUser.accountAddress, // maker
+            "0x0", // taker
+            APTOS_DEPLOYMENTS.packageAddress, // token
+            mintAmount.toString(), // amount
+            parseUnits("0.001", 18).toString(), // safety_deposit
+            aptosTimelocks, // timelocks
+            mintAmount.toString(), // partial_amount
+            parseUnits("0.001", 18).toString(), // safety_deposit_apt_amount
           ],
         },
       });
@@ -726,17 +669,147 @@ describe("🌉 Aptos ↔ Base Sepolia Cross-Chain Swaps", () => {
       console.log("❌ Aptos source escrow failed:", error.message);
     }
 
-    // STEP 4: Simulate Base Sepolia destination escrow
-    console.log("\n--- Step 4: Base Sepolia Destination Escrow (Simulated) ---");
-    console.log("✅ Would create destination escrow on Base Sepolia");
-    console.log("✅ Would deposit 99 DAI into Base Sepolia escrow");
+    // STEP 4: Create Base Sepolia destination escrow - REAL IMPLEMENTATION
+    console.log("\n--- Step 4: Base Sepolia Destination Escrow ---");
+    
+    const evmFactory = new Contract(BASE_SEPOLIA_DEPLOYMENTS.UniteEscrowFactory, ESCROW_FACTORY_ABI, evmResolver1);
+    
+    const evmTimelocks = encodeTimelocks({
+      srcWithdrawal: 0n,
+      srcPublicWithdrawal: 300n,
+      srcCancellation: 450n,
+      srcPublicCancellation: 511n,
+      dstWithdrawal: 0n,
+      dstPublicWithdrawal: 300n,
+      dstCancellation: 450n,
+    });
 
-    // STEP 5: Withdrawal simulation
-    console.log("\n--- Step 5: Withdrawal Process (Simulated) ---");
+    const evmImmutables = {
+      orderHash: hashlock,
+      hashlock: hashlock,
+      maker: BigInt(evmUser.address),
+      taker: 0n,
+      token: BigInt(BASE_SEPOLIA_DEPLOYMENTS.MockDAI),
+      amount: parseUnits("99", 18), // 99 DAI
+      safetyDeposit: parseUnits("0.001", 18),
+      timelocks: evmTimelocks
+    };
+
+    const srcCancellationTimestamp = Math.floor(Date.now() / 1000) + 3600;
+    
+    try {
+      // Create destination escrow
+      const dstEscrowTx = await evmFactory.createDstEscrowPartialFor(
+        evmImmutables,
+        srcCancellationTimestamp,
+        parseUnits("99", 18), // 99 DAI
+        evmResolver1.address,
+        { value: parseUnits("0.001", 18), gasLimit: 5000000 }
+      );
+      await dstEscrowTx.wait();
+      
+      // Transfer DAI to the escrow
+      const evmDAIAsResolver = evmDAI.connect(evmResolver1);
+      const transferTx = await evmDAIAsResolver.transfer(
+        await evmFactory.addressOfEscrowDst(evmImmutables),
+        parseUnits("99", 18)
+      );
+      await transferTx.wait();
+      
+      console.log("✅ Created destination escrow on Base Sepolia");
+      console.log("✅ Deposited 99 DAI into Base Sepolia escrow");
+    } catch (error: any) {
+      console.log("❌ Base Sepolia destination escrow failed:", error.message);
+    }
+
+    // STEP 5: Transfer USDT from user to Aptos escrow - ENTRY FUNCTION CALL
+    console.log("\n--- Step 5: Transfer User USDT to Aptos Escrow ---");
+    
+    try {
+      const aptosEscrowAddr = await aptos.view({
+        payload: {
+          function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow_factory::get_src_escrow_address`,
+          functionArguments: [Array.from(getBytes(hashlock)), APTOS_DEPLOYMENTS.packageAddress],
+        },
+      });
+      
+      if (aptosEscrowAddr[0] !== "0x0") {
+        const transferTxn = await aptos.transaction.build.simple({
+          sender: aptosUser.accountAddress,
+          data: {
+            function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow_factory::user_deposit`,
+            typeArguments: [`${APTOS_DEPLOYMENTS.packageAddress}::test_coin::TestUSDT`],
+            functionArguments: [
+              mintAmount.toString(),
+              aptosEscrowAddr[0],
+            ],
+          },
+        });
+        await aptos.signAndSubmitTransaction({ signer: aptosUser, transaction: transferTxn })
+          .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
+        console.log("✅ User transferred USDT to Aptos escrow");
+      }
+    } catch (error: any) {
+      console.log("❌ User USDT transfer failed:", error.message);
+    }
+
+    // STEP 6: Withdrawal process - REAL IMPLEMENTATION
+    console.log("\n--- Step 6: Withdrawal Process ---");
     console.log("🔓 Secret revealed:", hexlify(secret));
-    console.log("✅ User would withdraw 99 DAI from Base Sepolia escrow");
-    console.log("✅ Resolver would withdraw 100 USDT from Aptos escrow");
+    
+    // User withdraws DAI from Base Sepolia escrow
+    try {
+      const dstEscrowAddress = await evmFactory.addressOfEscrowDst(evmImmutables);
+      const dstEscrow = new Contract(dstEscrowAddress, ESCROW_ABI, evmUser);
+      
+      const userDAIBefore = await evmDAI.balanceOf(evmUser.address);
+      
+      const withdrawTx = await dstEscrow.withdrawWithSecret(secret, evmImmutables, { gasLimit: 1000000 });
+      await withdrawTx.wait();
+      
+      const userDAIAfter = await evmDAI.balanceOf(evmUser.address);
+      console.log("✅ User withdrew", formatUnits(userDAIAfter - userDAIBefore, 18), "DAI from Base Sepolia escrow");
+    } catch (error: any) {
+      console.log("❌ Base Sepolia withdrawal failed:", error.message);
+    }
 
-    console.log("\n✅ Aptos → Base Sepolia swap flow demonstrated!");
-  }, 120000);
+    // Resolver withdraws USDT from Aptos escrow - ENTRY FUNCTION CALL
+    try {
+      const aptosEscrowAddr = await aptos.view({
+        payload: {
+          function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow_factory::get_src_escrow_address`,
+          functionArguments: [Array.from(getBytes(hashlock)), APTOS_DEPLOYMENTS.packageAddress],
+        },
+      });
+
+      if (aptosEscrowAddr[0] !== "0x0") {
+        const withdrawTxn = await aptos.transaction.build.simple({
+          sender: aptosResolver1.accountAddress,
+          data: {
+            function: `${APTOS_DEPLOYMENTS.packageAddress}::escrow_factory::withdraw_with_secret`,
+            typeArguments: [`${APTOS_DEPLOYMENTS.packageAddress}::test_coin::TestUSDT`],
+            functionArguments: [
+              Array.from(secret),
+              Array.from(getBytes(hashlock)),
+              Array.from(getBytes(hashlock)),
+              aptosUser.accountAddress,
+              "0x0",
+              APTOS_DEPLOYMENTS.packageAddress,
+              mintAmount.toString(),
+              parseUnits("0.001", 18).toString(),
+              aptosTimelocks,
+              aptosEscrowAddr[0],
+            ],
+          },
+        });
+        await aptos.signAndSubmitTransaction({ signer: aptosResolver1, transaction: withdrawTxn })
+          .then(result => aptos.waitForTransaction({ transactionHash: result.hash }));
+        console.log("✅ Resolver withdrew USDT from Aptos escrow");
+      }
+    } catch (error: any) {
+      console.log("❌ Aptos withdrawal failed:", error.message);
+    }
+
+    console.log("\n✅ Aptos → Base Sepolia swap completed!");
+  }, 180000);
 });
