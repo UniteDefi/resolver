@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 use super::iunite_order::Order;
 
 #[starknet::interface]
-trait IUniteOrderProtocol<TContractState> {
+pub trait IUniteOrderProtocol<TContractState> {
     fn fill_order(
         ref self: TContractState,
         order: Order,
