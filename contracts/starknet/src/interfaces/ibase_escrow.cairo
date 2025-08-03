@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde, starknet::Store)]
-struct Immutables {
+pub struct Immutables {
     order_hash: felt252,
     hashlock: felt252,
     maker: ContractAddress,
@@ -13,7 +13,7 @@ struct Immutables {
 }
 
 #[starknet::interface]
-trait IBaseEscrow<TContractState> {
+pub trait IBaseEscrow<TContractState> {
     fn get_order_hash(self: @TContractState) -> felt252;
     fn get_hashlock(self: @TContractState) -> felt252;
     fn get_maker(self: @TContractState) -> ContractAddress;
