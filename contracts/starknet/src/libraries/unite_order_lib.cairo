@@ -1,8 +1,8 @@
 use core::hash::{HashStateTrait, HashStateExTrait};
 use core::poseidon::PoseidonTrait;
-use super::super::interfaces::iunite_order::Order;
+use crate::interfaces::iunite_order::Order;
 
-fn hash_order(order: @Order) -> felt252 {
+pub fn hash_order(order: @Order) -> felt252 {
     let mut state = PoseidonTrait::new();
     state = state.update((*order.salt).low.into());
     state = state.update((*order.salt).high.into());
