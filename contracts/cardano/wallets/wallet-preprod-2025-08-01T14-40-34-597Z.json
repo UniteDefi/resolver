@@ -1,7 +1,0 @@
-{
-  "privateKey": "40fc92427569ad5cef1d22146ffa7d4bf9696263ca3f028e02710f80990380ba",
-  "address": "Address generation requires lucid-cardano setup",
-  "network": "preprod",
-  "generatedAt": "2025-08-01T14:40:34.595Z",
-  "note": "This private key can be used with lucid-cardano to derive the actual address. Use: lucid.selectWalletFromPrivateKey(privateKey) then lucid.wallet.address()"
-}
