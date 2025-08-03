@@ -6,7 +6,7 @@ mod UniteLimitOrderProtocol {
         ContractAddress, get_caller_address, get_contract_address, get_block_timestamp,
         contract_address_const
     };
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use crate::interfaces::ierc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use crate::interfaces::iunite_order::{Order, IUniteOrder};
     use crate::interfaces::iunite_order_protocol::IUniteOrderProtocol;
     use crate::interfaces::iorder_mixin::{IOrderMixin, TakerTraits};
