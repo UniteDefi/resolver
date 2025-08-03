@@ -7,6 +7,7 @@ module aptos_addr::limit_order_protocol {
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
     use std::bcs;
+    use aptos_addr::order_hash as order_hash_module;
 
     // Error codes
     const E_ORDER_EXPIRED: u64 = 1;
