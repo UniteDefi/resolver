@@ -1,8 +1,13 @@
 ;; Jetton utilities for Unite Protocol
 
+;; Standard jetton wallet code (placeholder - should be actual jetton wallet code)
+cell jetton_wallet_code() inline {
+    return begin_cell().end_cell(); ;; Placeholder
+}
+
 () send_jettons(slice jetton_master, slice dest_addr, int amount, slice from_addr) impure {
     ;; Calculate jetton wallet address for sender
-    cell state_init = calculate_jetton_wallet_state_init(from_addr, jetton_master);
+    cell state_init = calculate_jetton_wallet_state_init(from_addr, jetton_master, jetton_wallet_code());
     slice jetton_wallet_addr = calculate_jetton_wallet_address(state_init);
     
     ;; Create transfer message
@@ -37,11 +42,21 @@ slice calculate_jetton_wallet_address(cell state_init) inline {
         .begin_parse();
 }
 
-cell calculate_jetton_wallet_state_init(slice owner_addr, slice jetton_master) inline {
-    return begin_cell()
-        .store_uint(0, 2)
-        .store_dict(null())
-        .store_dict(null())
-        .store_uint(0, 1)
+cell calculate_jetton_wallet_state_init(slice owner_addr, slice jetton_master, cell wallet_code) inline {
+    cell data = begin_cell()
+        .store_coins(0) ;; balance
+        .store_slice(owner_addr) ;; owner
+        .store_slice(jetton_master) ;; jetton_master
+        .store_ref(wallet_code) ;; jetton_wallet_code
         .end_cell();
+    
+    return begin_cell()
+        .store_maybe_ref(wallet_code)
+        .store_maybe_ref(data)
+        .end_cell();
+}
+
+slice calculate_user_jetton_wallet_address(slice owner_address, slice jetton_master, cell jetton_wallet_code) inline {
+    cell state_init = calculate_jetton_wallet_state_init(owner_address, jetton_master, jetton_wallet_code);
+    return calculate_jetton_wallet_address(state_init);
 }
