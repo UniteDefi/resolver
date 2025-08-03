@@ -2,88 +2,293 @@
 pragma solidity 0.8.23;
 
 import "forge-std/Script.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IMintableERC20 is IERC20 {
-    function mint(address to, uint256 amount) external;
-}
+contract FundWallets is Script {
+    // Usage: Set environment variables before running:
+    // FUND_TARGETS="user,resolver0,resolver1" (comma-separated, or "all")
+    // FUND_AMOUNT="1000000000000000000" (amount in wei, 1 ETH = 1e18)
+    //
+    // Examples:
+    // FUND_TARGETS="all" FUND_AMOUNT="100000000000000000" forge script script/FundWallets.s.sol --broadcast
+    // FUND_TARGETS="user,resolver0" FUND_AMOUNT="50000000000000000" forge script script/FundWallets.s.sol --broadcast
 
-contract MintTokens is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        
-        // Resolver wallets (use existing ones)
-        address resolver0 = vm.envAddress("RESOLVER_WALLET_0");
-        address resolver1 = vm.envAddress("RESOLVER_WALLET_1");
-        
-        // Get token addresses for current chain
-        (address mockUSDT, address mockDAI, address mockWrappedNative) = getTokenAddresses();
-        
-        console.log("Minting tokens on chain ID:", block.chainid);
-        console.log("MockUSDT:", mockUSDT);
-        console.log("MockDAI:", mockDAI);
-        console.log("MockWrappedNative:", mockWrappedNative);
-        
+        address deployer = vm.addr(deployerPrivateKey);
+
+        // Read targets and amount from environment
+        string memory targets = vm.envOr("FUND_TARGETS", string("all"));
+        uint256 amountWei = vm.envOr(
+            "FUND_AMOUNT",
+            uint256(100000000000000000)
+        ); // Default 0.1 ETH
+
+        console.log("=== FUNDING WALLETS ===");
+        console.log("Chain ID:", block.chainid);
+        console.log("Deployer:", deployer);
+        console.log(
+            "Deployer balance:",
+            deployer.balance,
+            "wei (",
+            deployer.balance / 1e18,
+            "ETH )"
+        );
+        console.log(
+            "Amount per wallet:",
+            amountWei,
+            "wei (",
+            amountWei / 1e18,
+            "ETH )"
+        );
+        console.log("Targets:", targets);
+
+        // Parse targets and get wallet addresses
+        address[] memory walletsToFund = parseTargets(targets);
+
+        if (walletsToFund.length == 0) {
+            console.log("❌ No valid targets specified");
+            console.log(
+                "Valid targets: user, resolver0, resolver1, resolver2, resolver3, all"
+            );
+            console.log("Set FUND_TARGETS environment variable");
+            return;
+        }
+
+        // Check if deployer has enough balance
+        uint256 totalRequired = walletsToFund.length * amountWei;
+        if (deployer.balance < totalRequired) {
+            console.log("❌ Insufficient deployer balance");
+            console.log(
+                "Required:",
+                totalRequired,
+                "wei (",
+                totalRequired / 1e18,
+                "ETH )"
+            );
+            console.log(
+                "Available:",
+                deployer.balance,
+                "wei (",
+                deployer.balance / 1e18,
+                "ETH )"
+            );
+            return;
+        }
+
+        console.log("\n--- Wallet Details ---");
+        for (uint i = 0; i < walletsToFund.length; i++) {
+            address wallet = walletsToFund[i];
+            if (wallet != address(0)) {
+                console.log(
+                    "Target",
+                    i,
+                    ":",
+                    wallet,
+                    "| Balance:",
+                    wallet.balance,
+                    "wei"
+                );
+            }
+        }
+
         vm.startBroadcast(deployerPrivateKey);
-        
-        // Mint USDT: 50,000 to each resolver
-        if (mockUSDT != address(0)) {
-            IMintableERC20(mockUSDT).mint(resolver0, 50_000 * 10**18);
-            IMintableERC20(mockUSDT).mint(resolver1, 50_000 * 10**18);
-            console.log("USDT minted");
+
+        // Fund each wallet
+        uint256 successCount = 0;
+        for (uint i = 0; i < walletsToFund.length; i++) {
+            address wallet = walletsToFund[i];
+
+            if (wallet == address(0)) {
+                console.log("⏭️ Skipping zero address at index", i);
+                continue;
+            }
+
+            uint256 balanceBefore = wallet.balance;
+
+            (bool success, ) = wallet.call{value: amountWei}("");
+            if (success) {
+                uint256 balanceAfter = wallet.balance;
+                console.log("✅ Funded", wallet);
+                console.log(
+                    "   Before:",
+                    balanceBefore,
+                    "wei | After:",
+                    balanceAfter,
+                    "wei"
+                );
+                successCount++;
+            } else {
+                console.log("❌ Failed to fund", wallet);
+            }
         }
-        
-        // Mint DAI: 50,000 to each resolver
-        if (mockDAI != address(0)) {
-            IMintableERC20(mockDAI).mint(resolver0, 50_000 * 10**18);
-            IMintableERC20(mockDAI).mint(resolver1, 50_000 * 10**18);
-            console.log("DAI minted");
-        }
-        
-        // Mint Wrapped Native: 5 to each resolver
-        if (mockWrappedNative != address(0)) {
-            IMintableERC20(mockWrappedNative).mint(resolver0, 5 * 10**18);
-            IMintableERC20(mockWrappedNative).mint(resolver1, 5 * 10**18);
-            console.log("Wrapped Native minted");
-        }
-        
+
         vm.stopBroadcast();
-        
-        console.log("\nToken minting complete!");
-        console.log("Resolvers received: 50k USDT, 50k DAI, 5 Wrapped Native each");
+
+        console.log("\n✅ FUNDING COMPLETE");
+        console.log(
+            "Successfully funded:",
+            successCount,
+            "/",
+            walletsToFund.length,
+            "wallets"
+        );
+        console.log(
+            "Amount per wallet:",
+            amountWei,
+            "wei (",
+            amountWei / 1e18,
+            "ETH )"
+        );
+        console.log(
+            "Total sent:",
+            successCount * amountWei,
+            "wei (",
+            (successCount * amountWei) / 1e18,
+            "ETH )"
+        );
+        console.log(
+            "Remaining deployer balance:",
+            deployer.balance,
+            "wei (",
+            deployer.balance / 1e18,
+            "ETH )"
+        );
     }
-    
-    function getTokenAddresses() internal view returns (address usdt, address dai, address wrappedNative) {
-        uint256 chainId = block.chainid;
-        
-        // Base Sepolia
-        if (chainId == 84532) {
-            return (
-                0x725437B77BEFb4418Dd91B91E6d736a52Cf8fd9A,
-                0x4B16066062aC208ED722DE1A043A6d14857f26f2,
-                0x159F8080B5BAEA5B681675cEC2f7fbC58D7ef734
-            );
+
+    function parseTargets(
+        string memory targets
+    ) internal view returns (address[] memory) {
+        // Convert to lowercase for comparison
+        string memory lowerTargets = vm.toLowercase(targets);
+
+        // Get all possible wallet addresses
+        address user = getWalletAddress("user");
+        address resolver0 = getWalletAddress("resolver0");
+        address resolver1 = getWalletAddress("resolver1");
+        address resolver2 = getWalletAddress("resolver2");
+        address resolver3 = getWalletAddress("resolver3");
+
+        // Handle "all" case
+        if (keccak256(bytes(lowerTargets)) == keccak256(bytes("all"))) {
+            address[] memory allWallets = new address[](5);
+            allWallets[0] = user;
+            allWallets[1] = resolver0;
+            allWallets[2] = resolver1;
+            allWallets[3] = resolver2;
+            allWallets[4] = resolver3;
+            console.log("Selected all wallets for funding");
+            return allWallets;
         }
-        
-        // Arbitrum Sepolia
-        if (chainId == 421614) {
-            return (
-                0xffaD6Ca8c4060FE34F5848cf338c8cC681941278,
-                0xA1bde0809362E4faC16a0f7E0C654aACCa956807,
-                0x75784eC4AE2826FFF0ecC6C7bEc9971EBf607Ad7
-            );
+
+        // Parse comma-separated targets
+        address[] memory tempWallets = new address[](5); // Max possible
+        uint count = 0;
+
+        // Check each target type
+        if (contains(lowerTargets, "user") && user != address(0)) {
+            tempWallets[count++] = user;
+            console.log("Added user wallet:", user);
         }
-        
-        // Ethereum Sepolia
-        if (chainId == 11155111) {
-            return (
-                0x0813210DE316379FaEc640AB2bab918385e2b269,
-                0xf3BABa977445A991B0017f57C84b8922Bce4494E,
-                0xA54a2868D24D3D370E3cDF320471705c26C4432C
-            );
+        if (contains(lowerTargets, "resolver0") && resolver0 != address(0)) {
+            tempWallets[count++] = resolver0;
+            console.log("Added resolver0 wallet:", resolver0);
         }
-        
-        // Add more chains as needed
-        revert("Chain not configured for token minting");
+        if (contains(lowerTargets, "resolver1") && resolver1 != address(0)) {
+            tempWallets[count++] = resolver1;
+            console.log("Added resolver1 wallet:", resolver1);
+        }
+        if (contains(lowerTargets, "resolver2") && resolver2 != address(0)) {
+            tempWallets[count++] = resolver2;
+            console.log("Added resolver2 wallet:", resolver2);
+        }
+        if (contains(lowerTargets, "resolver3") && resolver3 != address(0)) {
+            tempWallets[count++] = resolver3;
+            console.log("Added resolver3 wallet:", resolver3);
+        }
+
+        // Create result array with correct size
+        address[] memory result = new address[](count);
+        for (uint i = 0; i < count; i++) {
+            result[i] = tempWallets[i];
+        }
+
+        return result;
+    }
+
+    function getWalletAddress(
+        string memory walletType
+    ) internal view returns (address) {
+        bytes32 typeHash = keccak256(bytes(walletType));
+
+        if (typeHash == keccak256(bytes("user"))) {
+            try vm.envUint("PRIVATE_KEY") returns (uint256 key) {
+                return vm.addr(key);
+            } catch {
+                console.log("Warning: PRIVATE_KEY not found for user");
+                return address(0);
+            }
+        }
+
+        if (typeHash == keccak256(bytes("resolver0"))) {
+            try vm.envAddress("RESOLVER_WALLET_0") returns (address addr) {
+                return addr;
+            } catch {
+                console.log("Warning: RESOLVER_WALLET_0 not found");
+                return address(0);
+            }
+        }
+
+        if (typeHash == keccak256(bytes("resolver1"))) {
+            try vm.envAddress("RESOLVER_WALLET_1") returns (address addr) {
+                return addr;
+            } catch {
+                console.log("Warning: RESOLVER_WALLET_1 not found");
+                return address(0);
+            }
+        }
+
+        if (typeHash == keccak256(bytes("resolver2"))) {
+            try vm.envAddress("RESOLVER_WALLET_2") returns (address addr) {
+                return addr;
+            } catch {
+                console.log("Warning: RESOLVER_WALLET_2 not found");
+                return address(0);
+            }
+        }
+
+        if (typeHash == keccak256(bytes("resolver3"))) {
+            try vm.envAddress("RESOLVER_WALLET_3") returns (address addr) {
+                return addr;
+            } catch {
+                console.log("Warning: RESOLVER_WALLET_3 not found");
+                return address(0);
+            }
+        }
+
+        return address(0);
+    }
+
+    function contains(
+        string memory source,
+        string memory target
+    ) internal pure returns (bool) {
+        bytes memory sourceBytes = bytes(source);
+        bytes memory targetBytes = bytes(target);
+
+        if (targetBytes.length > sourceBytes.length) return false;
+        if (targetBytes.length == 0) return true;
+
+        for (uint i = 0; i <= sourceBytes.length - targetBytes.length; i++) {
+            bool found = true;
+            for (uint j = 0; j < targetBytes.length; j++) {
+                if (sourceBytes[i + j] != targetBytes[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) return true;
+        }
+
+        return false;
     }
 }
