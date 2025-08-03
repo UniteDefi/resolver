@@ -4,10 +4,10 @@ version = "1.0.0"
 authors = ["Unite Protocol"]
 
 [addresses]
-aptos_addr = "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881"
+aptos_addr = "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c"
 
 [dev-addresses]
-test_addr = "0x123"
+test_addr = "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-core.git"
