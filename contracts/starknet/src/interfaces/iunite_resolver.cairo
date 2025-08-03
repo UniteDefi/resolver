@@ -3,7 +3,7 @@ use super::ibase_escrow::Immutables;
 use super::iunite_order::Order;
 
 #[starknet::interface]
-trait IUniteResolver<TContractState> {
+pub trait IUniteResolver<TContractState> {
     fn deploy_src_compact_partial(
         ref self: TContractState,
         immutables: Immutables,
