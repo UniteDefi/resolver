@@ -1,6 +1,0 @@
-{
-  "privateKey": "382fd900dedcc3443f14ad760145e358c1d6dae8a6bf7ba8a93de7e68b0ff594",
-  "address": "Use lucid.selectWalletFromPrivateKey(privateKey) then lucid.wallet.address() to get address",
-  "network": "preprod",
-  "generatedAt": "2025-08-01T14:43:29.373Z"
-}
