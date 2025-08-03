@@ -190,6 +190,32 @@ contract UniteLimitOrderProtocol is IUniteOrderProtocol, IOrderMixin, EIP712, Re
         return order.makingAmount > filled ? order.makingAmount - filled : 0;
     }
     
+    // Implement IOrderMixin interface getRemainingAmountByOrder
+    function getRemainingAmountByOrder(IOrderMixin.Order memory order) external view returns (uint256) {
+        // Convert to IUniteOrder.Order and calculate
+        IUniteOrder.Order memory simpleOrder = IUniteOrder.Order({
+            salt: order.salt,
+            maker: order.maker,
+            receiver: order.receiver,
+            makerAsset: order.makerAsset,
+            takerAsset: order.takerAsset,
+            makingAmount: order.makingAmount,
+            takingAmount: order.takingAmount,
+            deadline: order.deadline,
+            nonce: order.nonce,
+            srcChainId: order.srcChainId,
+            dstChainId: order.dstChainId,
+            auctionStartTime: order.auctionStartTime,
+            auctionEndTime: order.auctionEndTime,
+            startPrice: order.startPrice,
+            endPrice: order.endPrice
+        });
+        
+        bytes32 orderHash = hashOrder(simpleOrder);
+        uint256 filled = filledAmounts[orderHash];
+        return order.makingAmount > filled ? order.makingAmount - filled : 0;
+    }
+    
     
     function getEscrowAddress(bytes32 orderHash) external view returns (address) {
         return escrowAddresses[orderHash];
@@ -285,6 +311,39 @@ contract UniteLimitOrderProtocol is IUniteOrderProtocol, IOrderMixin, EIP712, Re
 
         // Call the internal implementation
         return _fillOrderInternal(simpleOrder, signature, amount, 0, target);
+    }
+
+    // Update fill tracking for destination-side fills (called by UniteResolver)
+    function updateFillAmount(IOrderMixin.Order calldata order, uint256 fillAmount) external {
+        // Convert to simple order format
+        IUniteOrder.Order memory simpleOrder = IUniteOrder.Order({
+            salt: order.salt,
+            maker: order.maker,
+            receiver: order.receiver,
+            makerAsset: order.makerAsset,
+            takerAsset: order.takerAsset,
+            makingAmount: order.makingAmount,
+            takingAmount: order.takingAmount,
+            deadline: order.deadline,
+            nonce: order.nonce,
+            srcChainId: order.srcChainId,
+            dstChainId: order.dstChainId,
+            auctionStartTime: order.auctionStartTime,
+            auctionEndTime: order.auctionEndTime,
+            startPrice: order.startPrice,
+            endPrice: order.endPrice
+        });
+        
+        bytes32 orderHash = hashOrder(simpleOrder);
+        
+        // Update filled amounts
+        filledAmounts[orderHash] += fillAmount;
+        
+        // Mark order as fully filled if completely consumed
+        if (filledAmounts[orderHash] >= order.makingAmount) {
+            invalidatedOrders[orderHash] = true;
+            nonces[order.maker]++;
+        }
     }
 
     // The hashOrder for IOrderMixin.Order is handled internally
