@@ -13,8 +13,8 @@ contract DeployMocks is Script {
         
         vm.startBroadcast(deployerPrivateKey);
         
-        // Deploy MockUSDT with 6 decimals
-        MockUSDT mockUSDT = new MockUSDT("Mock USDT", "USDT", 6);
+        // Deploy MockUSDT with 18 decimals (same as DAI to avoid decimal issues)
+        MockUSDT mockUSDT = new MockUSDT("Mock USDT", "USDT", 18);
         console.log("MockUSDT:", address(mockUSDT));
         usdt = address(mockUSDT);
         
