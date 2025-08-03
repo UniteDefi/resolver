@@ -15,9 +15,12 @@ async function checkAccounts() {
   });
   
   const accounts = [
-    { name: "Main Account", address: process.env.STARKNET_ACCOUNT_ADDRESS, key: process.env.STARKNET_PRIVATE_KEY },
+    { name: "Deployer", address: process.env.STARKNET_ACCOUNT_ADDRESS, key: process.env.STARKNET_PRIVATE_KEY },
+    { name: "User", address: process.env.STARKNET_USER_ADDRESS, key: process.env.STARKNET_USER_PRIVATE_KEY },
     { name: "Resolver 0", address: process.env.STARKNET_RESOLVER_WALLET_0, key: process.env.STARKNET_RESOLVER_PRIVATE_KEY_0 },
     { name: "Resolver 1", address: process.env.STARKNET_RESOLVER_WALLET_1, key: process.env.STARKNET_RESOLVER_PRIVATE_KEY_1 },
+    { name: "Resolver 2", address: process.env.STARKNET_RESOLVER_WALLET_2, key: process.env.STARKNET_RESOLVER_PRIVATE_KEY_2 },
+    { name: "Resolver 3", address: process.env.STARKNET_RESOLVER_WALLET_3, key: process.env.STARKNET_RESOLVER_PRIVATE_KEY_3 },
   ];
   
   for (const acc of accounts) {
@@ -46,9 +49,12 @@ async function checkAccounts() {
     const evmProvider = new JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org");
     
     const evmAccounts = [
-      { name: "Main User", key: process.env.PRIVATE_KEY },
+      { name: "Test User", key: process.env.TEST_USER_PRIVATE_KEY },
+      { name: "Deployer", key: process.env.DEPLOYER_PRIVATE_KEY },
       { name: "Resolver 0", key: process.env.RESOLVER_PRIVATE_KEY_0 },
       { name: "Resolver 1", key: process.env.RESOLVER_PRIVATE_KEY_1 },
+      { name: "Resolver 2", key: process.env.RESOLVER_PRIVATE_KEY_2 },
+      { name: "Resolver 3", key: process.env.RESOLVER_PRIVATE_KEY_3 },
     ];
     
     for (const acc of evmAccounts) {
