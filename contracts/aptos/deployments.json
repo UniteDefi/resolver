@@ -18,28 +18,28 @@
     "testnet": {
       "chainId": 2,
       "name": "Aptos Testnet",
-      "packageAddress": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881",
+      "packageAddress": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c",
       "network": "testnet",
       "modules": {
-        "escrow": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::escrow",
-        "escrow_factory": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::escrow_factory",
-        "limit_order_protocol": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::limit_order_protocol",
-        "resolver": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::resolver",
-        "test_coin": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin",
-        "test_coin_v2": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin_v2"
+        "escrow": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::escrow",
+        "escrow_factory": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::escrow_factory",
+        "limit_order_protocol": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::limit_order_protocol",
+        "resolver": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::resolver",
+        "test_coin": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin"
       },
       "coins": {
-        "TestUSDT": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin::TestUSDT",
-        "TestDAI": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin::TestDAI",
-        "TestUSDTV2": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin_v2::TestUSDTV2",
-        "TestDAIV2": "0x3be6126c6fe11ee59076dc8b25bf6dfa2dbc1ea7a3789cf80331167efbd6c881::test_coin_v2::TestDAIV2"
+        "TestUSDT": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestUSDT",
+        "TestDAI": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestDAI"
       },
-      "deployment_transactions": {
-        "package_deployment": "0x485b56bcfe6886a947eedc0c63d1222190cccbe8439d36c70c858ab306f2082c",
-        "initialize_limit_order_protocol": "0x9db753ede0da0ab55863870b5484e90e89cdf56a27054d4df3c5afd2ec46fa5d",
-        "initialize_escrow_factory": "0x42e755d05b97709da344b2efd07c329c08807c256fb3f896f374c05db3cae9a3",
-        "initialize_usdt": "0xa4050215487eb8a47376e2cd89e075f52c5368d3f329ed4ac29bf474e5611081",
-        "initialize_dai": "0xcf6d9edfc96b9430d9676cbd3c9045dafecb0478e2edebbcd68625e99fcc6929"
+      "resolvers": [
+        "0x70dfa2520c9fa9898a67cc864916022b06e935c5ff2f7318e9e92c69d0ac79df",
+        "0xded89f5e3c5c9a1d403e0f73b3736654c3f1825b1a3c015927f2771f0ff27e90",
+        "0x7c044971bf5e7df2e1d1a661c57276252c6b64788e39973401424d833f5035db",
+        "0x12ac4b2897cde3749781833a72496ff3ea8f42a356f6d7bd90cb50f24d020690"
+      ],
+      "deployment_info": {
+        "deployed_at": "2025-08-03T07:48:47.584Z",
+        "deployer_address": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c"
       }
     }
   }
