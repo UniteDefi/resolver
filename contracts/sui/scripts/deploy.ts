@@ -5,10 +5,8 @@ import * as dotenv from "dotenv";
 import * as path from "path";
 import * as fs from "fs";
 import { execSync } from "child_process";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Get directory path
+const currentDir = path.resolve(__dirname);
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
