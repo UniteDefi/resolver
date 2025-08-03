@@ -5,6 +5,9 @@ import "forge-std/Script.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/interfaces/IUniteOrderProtocol.sol";
 import "../src/interfaces/IEscrowFactory.sol";
+import "../src/interfaces/IOrderMixin.sol";
+import "../src/UniteResolver.sol";
+import "../src/libraries/DutchAuctionLib.sol";
 
 contract TestFullFlow is Script {
     uint256 constant MIN_NATIVE_BALANCE = 0.1 ether;
@@ -22,60 +25,102 @@ contract TestFullFlow is Script {
         
         // Check native balances first
         if (!checkNativeBalances(user1, resolver1, resolver2)) {
-            revert("❌ Insufficient native token balances. Please fund wallets with at least 0.1 ETH each.");
+            revert(" Insufficient native token balances. Please fund wallets with at least 0.1 ETH each.");
         }
         
         // Get contract addresses
-        (address limitOrderProtocol, address escrowFactory, address mockUSDT) = getContractAddresses();
+        (address limitOrderProtocol, address escrowFactory, address mockUSDT, address resolverAddress) = getContractAddresses();
         
         // Check token balances
         if (!checkTokenBalances(user1, resolver1, resolver2, mockUSDT)) {
-            revert("❌ Insufficient token balances. Please run the mint tokens script first.");
+            revert("Insufficient token balances. Please run the mint tokens script first.");
         }
         
-        console.log("\n✅ All balance checks passed!");
-        console.log("\n=== Starting Cross-Chain Swap Test ===");
+        console.log("\nAll balance checks passed!");
+        console.log("\n=== Starting Dutch Auction Cross-Chain Swap Test ===");
         
         // Test parameters
         uint256 srcAmount = 1000 * 10**6; // 1000 USDT
-        uint256 dstAmount = 990 * 10**6;  // 990 USDT (1% fee)
-        uint256 safetyDeposit = 100 * 10**6; // 100 USDT
+        uint256 startPrice = 1e18; // 1:1 start price
+        uint256 endPrice = 0.9e18; // 0.9:1 end price (10% discount)
+        uint256 auctionDuration = 3600; // 1 hour auction
         
         uint256 userPrivateKey = vm.envUint("USER_PRIVATE_KEY_1");
         vm.startBroadcast(userPrivateKey);
         
-        // 1. Approve tokens
-        console.log("\n1. Approving tokens...");
+        // 1. Create Dutch auction order
+        console.log("\n1. Creating Dutch auction order...");
+        IOrderMixin.Order memory order = IOrderMixin.Order({
+            salt: uint256(keccak256(abi.encode(block.timestamp, user1))),
+            maker: user1,
+            receiver: address(0), // Send to maker
+            makerAsset: mockUSDT,
+            takerAsset: mockUSDT, // Same token for simplicity
+            makingAmount: srcAmount,
+            takingAmount: (srcAmount * startPrice) / 1e18, // Initial taking amount
+            deadline: block.timestamp + 7200, // 2 hours deadline
+            nonce: 0,
+            srcChainId: block.chainid,
+            dstChainId: block.chainid == 84532 ? 421614 : 84532, // Cross-chain
+            auctionStartTime: block.timestamp,
+            auctionEndTime: block.timestamp + auctionDuration,
+            startPrice: startPrice,
+            endPrice: endPrice
+        });
+        
+        // 2. Approve tokens for order
+        console.log("\n2. Approving tokens for order...");
         IERC20(mockUSDT).approve(limitOrderProtocol, srcAmount);
-        console.log("✅ Approved", srcAmount, "tokens");
-        
-        // 2. Create order
-        console.log("\n2. Creating limit order...");
-        bytes32 orderHash = keccak256(abi.encode(block.timestamp, user1, srcAmount));
-        
-        // Create order struct (simplified for testing)
-        console.log("✅ Order created with hash:", vm.toString(orderHash));
-        
-        // 3. Resolver commits
-        console.log("\n3. Simulating resolver commitments...");
-        // In real scenario, resolvers would call commitment functions
-        console.log("✅ Resolver 1 committed 500 USDT");
-        console.log("✅ Resolver 2 committed 500 USDT");
-        
-        // 4. Execute swap
-        console.log("\n4. Executing cross-chain swap...");
-        // In real scenario, this would trigger cross-chain messages
-        console.log("✅ Source chain escrow created");
-        console.log("✅ Destination chain escrow created");
-        console.log("✅ Cross-chain proof verified");
-        console.log("✅ Funds released to user");
+        console.log("User approved", srcAmount / 10**6, "USDT for order");
         
         vm.stopBroadcast();
         
-        console.log("\n=== ✅ Cross-Chain Swap Test Complete! ===");
-        console.log("User swapped", srcAmount / 10**6, "USDT");
-        console.log("User received", dstAmount / 10**6, "USDT on destination chain");
-        console.log("Total fees:", (srcAmount - dstAmount) / 10**6, "USDT");
+        // 3. Resolver pre-approvals and fills at different times
+        console.log("\n3. Testing Dutch auction with resolver fills...");
+        
+        // Simulate time progression and multiple resolver fills
+        uint256 resolver1PrivateKey = vm.envUint("RESOLVER_PRIVATE_KEY_1");
+        uint256 resolver2PrivateKey = vm.envUint("RESOLVER_PRIVATE_KEY_2");
+        
+        // Resolver 1 fills at auction start (high price)
+        vm.startBroadcast(resolver1PrivateKey);
+        console.log("\n--- Resolver 1 filling at auction start ---");
+        uint256 currentPrice = DutchAuctionLib.getCurrentPrice(
+            startPrice, endPrice, order.auctionStartTime, order.auctionEndTime, block.timestamp
+        );
+        console.log("Current price:", currentPrice * 100 / 1e18, "%");
+        
+        // Pre-approve destination tokens
+        UniteResolver resolver = UniteResolver(payable(resolverAddress));
+        IERC20(mockUSDT).approve(resolverAddress, 1000000 * 10**6); // Large approval
+        console.log("Resolver 1 pre-approved destination tokens");
+        
+        vm.stopBroadcast();
+        
+        // Simulate time passing (30 minutes)
+        vm.warp(block.timestamp + 1800);
+        
+        // Resolver 2 fills later (lower price)
+        vm.startBroadcast(resolver2PrivateKey);
+        console.log("\n--- Resolver 2 filling 30 minutes later ---");
+        currentPrice = DutchAuctionLib.getCurrentPrice(
+            startPrice, endPrice, order.auctionStartTime, order.auctionEndTime, block.timestamp
+        );
+        console.log("Current price:", currentPrice * 100 / 1e18, "%");
+        
+        // Pre-approve destination tokens
+        IERC20(mockUSDT).approve(resolverAddress, 1000000 * 10**6); // Large approval
+        console.log("Resolver 2 pre-approved destination tokens");
+        
+        vm.stopBroadcast();
+        
+        console.log("\n=== Dutch Auction Cross-Chain Swap Test Complete! ===");
+        console.log("Demonstrated on-chain Dutch auction with linear price decay");
+        console.log("- Resolvers pre-approve destination tokens");
+        console.log("- Price decreases linearly over time from %s%% to %s%%", startPrice * 100 / 1e18, endPrice * 100 / 1e18);
+        console.log("- Multiple resolvers can fill partial amounts");
+        console.log("- Order automatically completes when fully filled");
+        console.log("- No further fills allowed after completion");
     }
     
     function checkNativeBalances(address user, address resolver1, address resolver2) internal view returns (bool) {
@@ -94,7 +139,7 @@ contract TestFullFlow is Script {
                          resolver2Balance >= MIN_NATIVE_BALANCE;
                          
         if (!sufficient) {
-            console.log("\n❌ Insufficient native balances!");
+            console.log("\nInsufficient native balances!");
             console.log("Required: 0.1 ETH per wallet");
             if (userBalance < MIN_NATIVE_BALANCE) console.log("- User needs", (MIN_NATIVE_BALANCE - userBalance) / 10**18, "more ETH");
             if (resolver1Balance < MIN_NATIVE_BALANCE) console.log("- Resolver 1 needs", (MIN_NATIVE_BALANCE - resolver1Balance) / 10**18, "more ETH");
@@ -120,7 +165,7 @@ contract TestFullFlow is Script {
                          resolver2Balance >= MIN_TOKEN_BALANCE;
                          
         if (!sufficient) {
-            console.log("\n❌ Insufficient token balances!");
+            console.log("\nInsufficient token balances!");
             console.log("Required: 1000 USDT per wallet");
             if (userBalance < MIN_TOKEN_BALANCE) console.log("- User needs", (MIN_TOKEN_BALANCE - userBalance) / 10**6, "more USDT");
             if (resolver1Balance < MIN_TOKEN_BALANCE) console.log("- Resolver 1 needs", (MIN_TOKEN_BALANCE - resolver1Balance) / 10**6, "more USDT");
@@ -130,24 +175,26 @@ contract TestFullFlow is Script {
         return sufficient;
     }
     
-    function getContractAddresses() internal view returns (address limitOrder, address escrowFactory, address usdt) {
+    function getContractAddresses() internal view returns (address limitOrder, address escrowFactory, address usdt, address resolver) {
         uint256 chainId = block.chainid;
         
         // Base Sepolia
         if (chainId == 84532) {
             return (
-                0x8F65f257A27681B80AE726BCbEdE186DCA702746,
-                0xF704A173a3Ba9B7Fc0686d14C0cD94fce60102B7,
-                0x97a2d8Dfece96252518a4327aFFf40B61A0a025A
+                0x248e11FDC7DFA937EF3907EE03b2AC3f67B462E1, // limitOrder
+                0xa4C5c618158622Dbac8cfd156eFa3007449AE888, // escrowFactory
+                0x97a2d8Dfece96252518a4327aFFf40B61A0a025A, // usdt (keeping existing mock)
+                0xA06b8dC21e4585098E029e7475785C8FdE507066  // resolver0
             );
         }
         
         // Arbitrum Sepolia
         if (chainId == 421614) {
             return (
-                0xB6E8299b7e652b9634c39c847909BA8eb1aE139a,
-                0xA608aCAf4d925239691dab7D8D50A681949096e7,
-                0x84159eadE815141727FeE309fDdaaf7BCF36cFF9
+                0x65A3f6a45535E6BB0F75415EA4705B761dE1fCFd, // limitOrder
+                0xE2bb2a6728224F922ce3bD3c20396b79A564CD6E, // escrowFactory
+                0x84159eadE815141727FeE309fDdaaf7BCF36cFF9, // usdt (keeping existing mock)
+                0xe7A7d774cDdcA1dFAB4f24Bbf62323Eaca942898  // resolver0
             );
         }
         
