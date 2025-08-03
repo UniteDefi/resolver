@@ -1,0 +1,14 @@
+{
+  "packageId": "0x6250d81f60c6ae30e8c82412973f20857db0a220d2cab6a54e8cb1c41ec67a5d",
+  "escrowFactoryId": "0xd147cc55db3f1b75f7bf8db734bbe91ad29423f658d1c7a21a8858ec88a3a019",
+  "limitOrderProtocolId": "0xb9890e5e0a3eb4dd2f242aa5adc652eef952609b02d311b563519cf3835a7ed0",
+  "mockUSDTPackageId": "0x6250d81f60c6ae30e8c82412973f20857db0a220d2cab6a54e8cb1c41ec67a5d",
+  "mockDAIPackageId": "0x6250d81f60c6ae30e8c82412973f20857db0a220d2cab6a54e8cb1c41ec67a5d",
+  "mockUSDTTreasuryCapId": "0x93d606060e35e5d4921cc2ee6249f3311787e678902fee9c73c8e419f3689084",
+  "mockDAITreasuryCapId": "0xa0bbebb4ec16365d3b97ab1489b5f32e267d3afced2025a776b991b319e00155",
+  "mockUSDTMetadataId": "0xbbcfa4a1f1a2aa237bc5b5325c90430c546f3bdcdf349dd737729464e862afed",
+  "mockDAIMetadataId": "0x261395ef1ebe3289497c7e3fbe389ff78336c4eaf86cb769f74a423d4be7de53",
+  "deployerAddress": "0x409868cb1389522b028a6b8963c382d661c2d58270efa1668088f1cf3e54ad2c",
+  "network": "https://fullnode.testnet.sui.io:443",
+  "timestamp": "2025-08-03T14:17:09.435Z"
+}
