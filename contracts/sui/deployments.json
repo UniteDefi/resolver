@@ -36,17 +36,17 @@
   },
   "sui": {
     "testnet": {
-      "chainId": 2,
       "name": "Sui Testnet",
       "rpcUrl": "https://fullnode.testnet.sui.io:443",
-      "packageId": "0x3a3c13baf3c4ea9868afc40ae44ab6521a69a76582a51a4d54093967701a089a",
-      "LimitOrderProtocol": "0x58c4d36be991107296ae354480d915c7ab46c0d1c7c84bcfd8f8e0564812136c",
-      "EscrowFactory": "0x819afeca7df24fa691e3b1ff0813a00258309411938b9530f5df5cd7c19f967e",
-      "MockUSDC": "0x6157f494fd21d82f88d847cd8a82cf56cc2f7dcf3317faa5f82609357975561b",
-      "Clock": "0x0000000000000000000000000000000000000000000000000000000000000006",
-      "transactionDigest": "Au2hhU9ReepBTRLxjEwBkSqvT9FzuRtUuHgn3KUSbNvR",
-      "explorerUrl": "https://suiexplorer.com/txblock/Au2hhU9ReepBTRLxjEwBkSqvT9FzuRtUuHgn3KUSbNvR?network=testnet",
-      "deployedAt": "2025-08-02T20:09:08.672Z"
+      "packageId": "0xd5a5d6cb4c12a365b3ee39f672390cc629c12fa54cc68445836faf62312472c7",
+      "LimitOrderProtocol": "0xe685d47f42a121be01cc221194e2fe4b51b6843f5a088ce13f42a06c14eba75b",
+      "EscrowFactory": "0xdc5bb97453fb8d9c8b0436e34e169a7e028d81c633149df472ddbe009ce81d6c",
+      "MockUSDT": "0xdcaeccc673903cbea1fb401afe24bd2279de2a94637774d8222b2658887d8bfd",
+      "MockDAI": "0x3420875dced2ed6288f0d34aa116c398314de2a4d33d43e338058d5c8fb012e9",
+      "MockWrappedSui": "0x2e55d751356c3e64841e0b331e565e443c1bc22682c150fb92c6ec1dfde20373",
+      "SuiVault": "0x419303666e1564817252bd1a036657031c3571eba70246063394f563ebef19b8",
+      "timestamp": "2025-08-03T01:14:13.361Z",
+      "txDigest": "3L4Bdtetz9S1c7HueqWVzWcLX2fzy4bxuXboK9big7ah"
     }
   }
 }
