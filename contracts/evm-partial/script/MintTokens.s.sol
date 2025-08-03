@@ -12,14 +12,9 @@ contract MintTokens is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         
-        // User wallets
-        address user1 = vm.envAddress("USER_WALLET_1");
-        address user2 = vm.envAddress("USER_WALLET_2");
-        
-        // Resolver wallets
+        // Resolver wallets (use existing ones)
+        address resolver0 = vm.envAddress("RESOLVER_WALLET_0");
         address resolver1 = vm.envAddress("RESOLVER_WALLET_1");
-        address resolver2 = vm.envAddress("RESOLVER_WALLET_2");
-        address resolver3 = vm.envAddress("RESOLVER_WALLET_3");
         
         // Get token addresses for current chain
         (address mockUSDT, address mockDAI, address mockWrappedNative) = getTokenAddresses();
@@ -31,40 +26,30 @@ contract MintTokens is Script {
         
         vm.startBroadcast(deployerPrivateKey);
         
-        // Mint USDT: 100,000 to each user, 50,000 to each resolver
+        // Mint USDT: 50,000 to each resolver
         if (mockUSDT != address(0)) {
-            IMintableERC20(mockUSDT).mint(user1, 100_000 * 10**6);
-            IMintableERC20(mockUSDT).mint(user2, 100_000 * 10**6);
-            IMintableERC20(mockUSDT).mint(resolver1, 50_000 * 10**6);
-            IMintableERC20(mockUSDT).mint(resolver2, 50_000 * 10**6);
-            IMintableERC20(mockUSDT).mint(resolver3, 50_000 * 10**6);
-            console.log("✅ USDT minted");
+            IMintableERC20(mockUSDT).mint(resolver0, 50_000 * 10**18);
+            IMintableERC20(mockUSDT).mint(resolver1, 50_000 * 10**18);
+            console.log("USDT minted");
         }
         
-        // Mint DAI: 100,000 to each user, 50,000 to each resolver
+        // Mint DAI: 50,000 to each resolver
         if (mockDAI != address(0)) {
-            IMintableERC20(mockDAI).mint(user1, 100_000 * 10**18);
-            IMintableERC20(mockDAI).mint(user2, 100_000 * 10**18);
+            IMintableERC20(mockDAI).mint(resolver0, 50_000 * 10**18);
             IMintableERC20(mockDAI).mint(resolver1, 50_000 * 10**18);
-            IMintableERC20(mockDAI).mint(resolver2, 50_000 * 10**18);
-            IMintableERC20(mockDAI).mint(resolver3, 50_000 * 10**18);
-            console.log("✅ DAI minted");
+            console.log("DAI minted");
         }
         
-        // Mint Wrapped Native: 10 to each user, 5 to each resolver
+        // Mint Wrapped Native: 5 to each resolver
         if (mockWrappedNative != address(0)) {
-            IMintableERC20(mockWrappedNative).mint(user1, 10 * 10**18);
-            IMintableERC20(mockWrappedNative).mint(user2, 10 * 10**18);
+            IMintableERC20(mockWrappedNative).mint(resolver0, 5 * 10**18);
             IMintableERC20(mockWrappedNative).mint(resolver1, 5 * 10**18);
-            IMintableERC20(mockWrappedNative).mint(resolver2, 5 * 10**18);
-            IMintableERC20(mockWrappedNative).mint(resolver3, 5 * 10**18);
-            console.log("✅ Wrapped Native minted");
+            console.log("Wrapped Native minted");
         }
         
         vm.stopBroadcast();
         
-        console.log("\n✅ Token minting complete!");
-        console.log("Users received: 100k USDT, 100k DAI, 10 Wrapped Native each");
+        console.log("\nToken minting complete!");
         console.log("Resolvers received: 50k USDT, 50k DAI, 5 Wrapped Native each");
     }
     
@@ -74,18 +59,18 @@ contract MintTokens is Script {
         // Base Sepolia
         if (chainId == 84532) {
             return (
-                0x97a2d8Dfece96252518a4327aFFf40B61A0a025A,
-                0x45A3AF79Ad654e75114988Abd92615eD79754eF5,
-                0x67f4840a271fd6f130324F576312eCd806Cc9545
+                0x725437B77BEFb4418Dd91B91E6d736a52Cf8fd9A,
+                0x4B16066062aC208ED722DE1A043A6d14857f26f2,
+                0x159F8080B5BAEA5B681675cEC2f7fbC58D7ef734
             );
         }
         
         // Arbitrum Sepolia
         if (chainId == 421614) {
             return (
-                0x84159eadE815141727FeE309fDdaaf7BCF36cFF9,
-                0x79899508A267fCC3E5F838a488b7eFA2D8f32659,
-                0x630b2EBcA37EeE832c1c6982858ec552afc05605
+                0xffaD6Ca8c4060FE34F5848cf338c8cC681941278,
+                0xA1bde0809362E4faC16a0f7E0C654aACCa956807,
+                0x75784eC4AE2826FFF0ecC6C7bEc9971EBf607Ad7
             );
         }
         
