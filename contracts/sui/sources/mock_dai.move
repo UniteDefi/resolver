@@ -13,7 +13,7 @@ module unite::mock_dai {
     fun init(witness: MOCK_DAI, ctx: &mut TxContext) {
         let (treasury, metadata) = coin::create_currency(
             witness,
-            18, // DAI has 18 decimals
+            6, // DAI has 6 decimals for cross-chain compatibility
             b"DAI",
             b"Mock Dai Stablecoin",
             b"Mock DAI for testing cross-chain swaps",
