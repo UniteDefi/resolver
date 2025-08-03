@@ -1,12 +1,14 @@
 {
-  "name": "icp-counter-tests",
+  "name": "icp-unite-defi",
   "version": "1.0.0",
-  "description": "TypeScript tests for ICP counter canister",
+  "description": "Unite DeFi ICP smart contracts and tests",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "deploy:local": "dfx deploy --network local",
-    "deploy:ic": "dfx deploy --network ic",
+    "deploy": "./scripts/DeployAll.sh",
+    "fund": "./scripts/FundWallets.sh",
+    "mint": "./scripts/MintTokens.sh",
+    "setup": "yarn deploy && yarn fund && yarn mint",
     "start": "dfx start --clean",
     "stop": "dfx stop",
     "generate": "dfx generate"
