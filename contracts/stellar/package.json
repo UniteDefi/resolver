@@ -5,9 +5,16 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:swap": "jest tests/unite-swap.test.ts",
     "build:contract": "cargo build --target wasm32-unknown-unknown --release",
+    "deploy": "ts-node scripts/deploy-all.ts",
+    "fund-wallets": "ts-node scripts/fund-wallets.ts",
+    "mint-tokens": "ts-node scripts/mint-tokens.ts",
     "deploy:testnet": "ts-node scripts/deploy.ts --network testnet",
-    "deploy:local": "ts-node scripts/deploy.ts --network local"
+    "deploy:local": "ts-node scripts/deploy.ts --network local",
+    "deploy:unite": "ts-node scripts/deploy-unite.ts --network=testnet",
+    "setup:tokens": "ts-node scripts/setup-tokens.ts",
+    "full:deploy": "npm run deploy && npm run fund-wallets && npm run mint-tokens"
   },
   "devDependencies": {
     "@stellar/stellar-sdk": "^11.2.2",
