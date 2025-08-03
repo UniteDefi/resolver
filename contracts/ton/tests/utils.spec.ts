@@ -16,21 +16,21 @@ describe("🔧 Utility Functions", () => {
         const secret2 = generateSecret();
         
         expect(secret1).not.toBe(secret2);
-        expect(secret1).toBeInstanceOf(BigInt);
-        expect(secret2).toBeInstanceOf(BigInt);
+        expect(typeof secret1).toBe("bigint");
+        expect(typeof secret2).toBe("bigint");
         
         const hashlock1 = calculateHashlock(secret1);
         const hashlock2 = calculateHashlock(secret2);
         
         expect(hashlock1).not.toBe(hashlock2);
-        expect(hashlock1).toBeInstanceOf(BigInt);
+        expect(typeof hashlock1).toBe("bigint");
         
         // Same secret should produce same hashlock
         expect(calculateHashlock(secret1)).toBe(hashlock1);
     });
     
     it("should create valid swap parameters", () => {
-        const maker = Address.parse("0QAO3w5QGT5GKxnhPSHrtGMZSCOzD4LlhcyNyuL_8Gl7-_pF");
+        const maker = Address.parse("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c");
         const srcAmount = toNano("100");
         const dstAmount = BigInt("100000000"); // 100 USDT
         
@@ -47,9 +47,9 @@ describe("🔧 Utility Functions", () => {
         expect(params.maker).toBe(maker);
         expect(params.srcAmount).toBe(srcAmount);
         expect(params.dstAmount).toBe(dstAmount);
-        expect(params.secret).toBeInstanceOf(BigInt);
-        expect(params.hashlock).toBeInstanceOf(BigInt);
-        expect(params.orderHash).toBeInstanceOf(BigInt);
+        expect(typeof params.secret).toBe("bigint");
+        expect(typeof params.hashlock).toBe("bigint");
+        expect(typeof params.orderHash).toBe("bigint");
         expect(params.safetyDepositPerUnit).toBeGreaterThan(0n);
     });
     
