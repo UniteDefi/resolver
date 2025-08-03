@@ -19,7 +19,9 @@
     "check": "make check-env",
     "clean": "make clean",
     "full-setup": "make full-setup",
-    "verify:contracts": "ts-node scripts/verify-deployment.ts"
+    "verify:contracts": "ts-node scripts/verify-deployment.ts",
+    "mint:tokens": "ts-node scripts/mint-test-tokens.ts",
+    "test:full-flow": "ts-node scripts/test-full-flow.ts"
   },
   "keywords": [
     "cosmos",
