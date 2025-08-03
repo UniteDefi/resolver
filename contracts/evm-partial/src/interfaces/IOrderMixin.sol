@@ -36,4 +36,6 @@ interface IOrderMixin {
     function getFilledAmount(bytes32 orderHash) external view returns (uint256);
     function getEscrowAddress(bytes32 orderHash) external view returns (address);
     function isOrderFullyFilled(bytes32 orderHash) external view returns (bool);
+    function getRemainingAmountByOrder(Order memory order) external view returns (uint256);
+    function updateFillAmount(Order calldata order, uint256 fillAmount) external;
 }
