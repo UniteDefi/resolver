@@ -210,7 +210,7 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     // Source chain balances (USDT)
     console.log("\n--- Token balances ---");
     const userBalance = await srcToken.balanceOf(user.address);
-    console.log("User USDT (source):", formatUnits(userBalance, 18));
+    console.log("User USDT (source):", formatUnits(userBalance, 6));
     
     // Destination chain balances (DAI) - fund resolvers if needed
     const resolver1DaiBalance = await dstToken.balanceOf(resolver1Dst.address);
@@ -225,17 +225,19 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     
     // User approves source tokens to factory
     const currentAllowance = await srcToken.allowance(user.address, srcChainConfig.UniteEscrowFactory);
-    if (currentAllowance < parseUnits("100", 18)) {
-      const approveTx = await srcToken.approve(srcChainConfig.UniteEscrowFactory, parseUnits("1000", 18));
+    if (currentAllowance < parseUnits("100", 6)) {
+      const approveTx = await srcToken.approve(srcChainConfig.UniteEscrowFactory, parseUnits("1000", 6));
       await approveTx.wait();
       console.log("✅ User approved source token to factory");
     }
     
     // STEP 3: Create and sign order
     console.log("\n=== STEP 3: CREATE AND SIGN ORDER ===");
-    const totalAmount = parseUnits("100", 18);
+    const totalAmount = parseUnits("100", 6);
     const totalDaiAmount = parseUnits("99", 18); // Slightly less due to price impact
-    const safetyDepositPerUnit = parseUnits("0.0001", 18); // 0.0001 ETH per 1 USDT (18 decimals)
+    
+    // CONSTANT SAFETY DEPOSIT: Fixed amount per resolver regardless of trade size
+    const CONSTANT_SAFETY_DEPOSIT = parseUnits("0.01", 18); // 0.01 ETH per resolver
     
     const auctionStartTime = Math.floor(Date.now() / 1000);
     const auctionEndTime = auctionStartTime + 300; // 5 minutes
@@ -281,7 +283,7 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     
     // STEP 4: Resolvers deploy source escrows with safety deposits
     console.log("\n=== STEP 4: RESOLVERS DEPLOY SOURCE ESCROWS ===");
-    console.log("Note: Resolvers must deploy BOTH source AND destination escrows before relayer transfers user funds");
+    console.log("Note: Using CONSTANT safety deposits for all resolvers");
     
     // Fixed timelock values - no time limits for withdrawal with secret, only for cancellation/public actions
     const timelocks = encodeTimelocks({
@@ -295,31 +297,23 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     });
     
     // Resolver commitments - must add up to totalAmount (100 USDT)
-    const resolver1Amount = parseUnits("40", 18);
-    const resolver2Amount = parseUnits("30", 18);  // Changed from 25 to 30
-    const resolver3Amount = parseUnits("30", 18);  // Changed from 35 to 30
+    const resolver1Amount = parseUnits("40", 6);
+    const resolver2Amount = parseUnits("30", 6);
+    const resolver3Amount = parseUnits("30", 6);
     
-    // Simple safety deposit calculation - per USDT basis
-    const resolver1SafetyDeposit = (safetyDepositPerUnit * resolver1Amount) / parseUnits("1", 18);
-    const resolver2SafetyDeposit = (safetyDepositPerUnit * resolver2Amount) / parseUnits("1", 18);
-    const resolver3SafetyDeposit = (safetyDepositPerUnit * resolver3Amount) / parseUnits("1", 18);
+    console.log("Resolver amounts:", formatUnits(resolver1Amount, 6), formatUnits(resolver2Amount, 6), formatUnits(resolver3Amount, 6));
+    console.log("Total resolver amount:", formatUnits(resolver1Amount + resolver2Amount + resolver3Amount, 6));
+    console.log("CONSTANT safety deposit per resolver:", formatUnits(CONSTANT_SAFETY_DEPOSIT, 18), "ETH");
     
-    console.log("Resolver amounts:", formatUnits(resolver1Amount, 18), formatUnits(resolver2Amount, 18), formatUnits(resolver3Amount, 18));
-    console.log("Total resolver amount:", formatUnits(resolver1Amount + resolver2Amount + resolver3Amount, 18));
-    console.log("Safety deposits:", formatUnits(resolver1SafetyDeposit, 18), formatUnits(resolver2SafetyDeposit, 18), formatUnits(resolver3SafetyDeposit, 18));
-    
-    // Calculate total safety deposit for the entire order
-    const totalSafetyDeposit = resolver1SafetyDeposit + resolver2SafetyDeposit + resolver3SafetyDeposit;
-    
-    // Use the same immutables for ALL resolvers on source chain
+    // SOURCE IMMUTABLES: Use source token and amounts with CONSTANT safety deposit
     const srcImmutables = {
       orderHash: orderHash,
       hashlock: hashlock,
       maker: BigInt(user.address),
       taker: BigInt("0"), // Use zero address for multi-resolver orders
-      token: BigInt(srcChainConfig.MockUSDT),
-      amount: totalAmount,
-      safetyDeposit: totalSafetyDeposit, // TOTAL safety deposit
+      token: BigInt(srcChainConfig.MockUSDT), // SOURCE TOKEN (USDT)
+      amount: totalAmount, // SOURCE AMOUNT (100 USDT)
+      safetyDeposit: CONSTANT_SAFETY_DEPOSIT, // CONSTANT safety deposit per resolver
       timelocks: timelocks
     };
     
@@ -334,9 +328,9 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     console.log("  Resolver 3:", resolver3SrcContract.target);
     
     const resolvers = [
-      { contract: resolver1SrcContract, amount: resolver1Amount, deposit: resolver1SafetyDeposit, name: "Resolver 1" },
-      { contract: resolver2SrcContract, amount: resolver2Amount, deposit: resolver2SafetyDeposit, name: "Resolver 2" },
-      { contract: resolver3SrcContract, amount: resolver3Amount, deposit: resolver3SafetyDeposit, name: "Resolver 3" }
+      { contract: resolver1SrcContract, amount: resolver1Amount, name: "Resolver 1" },
+      { contract: resolver2SrcContract, amount: resolver2Amount, name: "Resolver 2" },
+      { contract: resolver3SrcContract, amount: resolver3Amount, name: "Resolver 3" }
     ];
     
     const successfulSrcResolvers = [];
@@ -344,29 +338,28 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     for (const resolver of resolvers) {
       try {
         console.log(`\n${resolver.name} deploying source escrow...`);
-        console.log(`  Amount: ${formatUnits(resolver.amount, 18)} USDT`);
-        console.log(`  Safety deposit: ${formatUnits(resolver.deposit, 18)} ETH`);
+        console.log(`  Amount: ${formatUnits(resolver.amount, 6)} USDT`);
+        console.log(`  Safety deposit: ${formatUnits(CONSTANT_SAFETY_DEPOSIT, 18)} ETH`);
         console.log(`  Contract: ${resolver.contract.target}`);
         
         // Check wallet balances before transaction
         const wallet = resolver.contract.runner;
         const ethBalance = await srcProvider.getBalance(wallet.address);
         console.log(`  Wallet ETH balance: ${formatUnits(ethBalance, 18)}`);
-        console.log(`  Required ETH: ${formatUnits(resolver.deposit, 18)}`);
+        console.log(`  Required ETH: ${formatUnits(CONSTANT_SAFETY_DEPOSIT, 18)}`);
         
         const tx = await resolver.contract.deploySrcCompactPartial(
           srcImmutables, order, signature.r, signature.vs, resolver.amount, resolver.amount,
-          { value: resolver.deposit, gasLimit: 10000000 }
+          { value: CONSTANT_SAFETY_DEPOSIT, gasLimit: 10000000 }
         );
         const receipt = await tx.wait();
         console.log(`✅ ${resolver.name} deployed source escrow (gas: ${receipt.gasUsed})`);
-        successfulSrcResolvers.push(resolver);
+        successfulSrcResolvers.push({ ...resolver, deposit: CONSTANT_SAFETY_DEPOSIT });
       } catch (error: any) {
         console.log(`❌ ${resolver.name} source failed:`, error.reason || error.message);
         if (error.receipt) {
           console.log(`  Gas used: ${error.receipt.gasUsed}, Status: ${error.receipt.status}`);
         }
-        // Try to get more detailed error information
         if (error.transaction) {
           console.log(`  Transaction hash: ${error.transaction.hash}`);
         }
@@ -377,17 +370,26 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     
     // Adjust total amount based on successful commitments
     const totalCommitted = successfulSrcResolvers.reduce((sum, r) => sum + r.amount, 0n);
-    console.log("Total committed on source:", formatUnits(totalCommitted, 18), "USDT");
+    console.log("Total committed on source:", formatUnits(totalCommitted, 6), "USDT");
     
-    if (totalCommitted < parseUnits("50", 18)) { // Minimum 50 USDT to continue
+    if (totalCommitted < parseUnits("50", 6)) { // Minimum 50 USDT to continue
       console.log("❌ Insufficient commitments (minimum 50 USDT required), stopping test");
       return;
     }
     
-    console.log("✅ Proceeding with", formatUnits(totalCommitted, 18), "USDT");
+    console.log("✅ Proceeding with", formatUnits(totalCommitted, 6), "USDT");
     
-    // Note: We keep using original srcImmutables since the escrow was deployed with those
-    // The escrow contract will handle partial amounts internally
+    // DESTINATION IMMUTABLES: Use destination token but same structure with CONSTANT safety deposit
+    const dstImmutables = {
+      orderHash: orderHash,
+      hashlock: hashlock,
+      maker: BigInt(user.address),
+      taker: BigInt("0"), // Use zero address for multi-resolver orders
+      token: BigInt(dstChainConfig.MockDAI), // DESTINATION TOKEN (DAI)
+      amount: totalAmount, // SOURCE AMOUNT (100 USDT) - for consistency and validation
+      safetyDeposit: CONSTANT_SAFETY_DEPOSIT, // CONSTANT safety deposit per resolver
+      timelocks: timelocks
+    };
     
     // STEP 5: Resolvers pre-approve tokens and use fillOrder for Dutch auction
     console.log("\n=== STEP 5: RESOLVERS PRE-APPROVE TOKENS AND USE DUTCH AUCTION FILLORDER ===");
@@ -414,7 +416,6 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     
     console.log(`Processing ${dstResolvers.length} destination resolvers (those that succeeded on source)`);
     
-    
     // Pre-approve DAI for all resolvers
     for (const resolver of dstResolvers) {
       try {
@@ -440,12 +441,6 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     const successfulDstResolvers = [];
     
     for (const resolver of dstResolvers) {
-      // Skip if this resolver didn't succeed on source chain
-      if (!successfulSrcResolvers.find(r => r.name === resolver.name)) {
-        console.log(`⏭️ Skipping ${resolver.name} - source deployment failed`);
-        continue;
-      }
-      
       try {
         console.log(`\n${resolver.name} executing fillOrder...`);
         
@@ -459,8 +454,9 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
           currentTime
         );
         
-        console.log(`  Source amount: ${formatUnits(resolver.srcAmount, 18)} USDT`);
+        console.log(`  Source amount: ${formatUnits(resolver.srcAmount, 6)} USDT`);
         console.log(`  Expected DAI amount: ${formatUnits(expectedDaiAmount, 18)} DAI`);
+        console.log(`  Safety deposit: ${formatUnits(CONSTANT_SAFETY_DEPOSIT, 18)} ETH`);
         
         // Check balances
         const daiBalance = await dstToken.balanceOf(resolver.wallet.address);
@@ -477,27 +473,15 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
           throw new Error(`Insufficient allowance. Need ${formatUnits(expectedDaiAmount, 18)}, have ${formatUnits(allowance, 18)}`);
         }
         
-        // Create immutables for this resolver's partial fill
-        const resolverDstImmutables = {
-          orderHash: orderHash,
-          hashlock: hashlock,
-          maker: BigInt(user.address),
-          taker: BigInt(resolver.wallet.address),
-          token: BigInt(dstChainConfig.MockDAI),
-          amount: resolver.srcAmount, // Source amount they want to fill
-          safetyDeposit: (safetyDepositPerUnit * resolver.srcAmount) / parseUnits("1", 18),
-          timelocks: timelocks
-        };
-        
         const fillTx = await resolver.contract.fillOrder(
-          resolverDstImmutables,
+          dstImmutables, // Use consistent destination immutables with CONSTANT safety deposit
           order,
           srcCancellationTimestamp,
           resolver.srcAmount, // srcAmount - resolver wants to fill this much USDT equivalent
-          { value: resolverDstImmutables.safetyDeposit, gasLimit: 10000000 }
+          { value: CONSTANT_SAFETY_DEPOSIT, gasLimit: 10000000 }
         );
         const receipt = await fillTx.wait();
-        console.log(`✅ ${resolver.name} used fillOrder for ${formatUnits(resolver.srcAmount, 18)} USDT equivalent (gas: ${receipt.gasUsed})`);
+        console.log(`✅ ${resolver.name} used fillOrder for ${formatUnits(resolver.srcAmount, 6)} USDT equivalent (gas: ${receipt.gasUsed})`);
         successfulDstResolvers.push(resolver);
       } catch (error: any) {
         console.log(`❌ ${resolver.name} fillOrder failed:`, error.reason || error.message);
@@ -512,11 +496,11 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     // STEP 6: Relayer transfers user funds to source escrow
     console.log("\n=== STEP 6: RELAYER TRANSFERS USER FUNDS (SECRET REVEALED) ===");
     const totalFilled = await srcFactory.getTotalFilledAmount(orderHash);
-    console.log("Total filled amount:", formatUnits(totalFilled, 18), "USDT");
+    console.log("Total filled amount:", formatUnits(totalFilled, 6), "USDT");
     
     if (totalFilled >= totalCommitted) {
       const userUSDTBefore = await srcToken.balanceOf(user.address);
-      console.log("User USDT before transfer:", formatUnits(userUSDTBefore, 18));
+      console.log("User USDT before transfer:", formatUnits(userUSDTBefore, 6));
       
       const transferTx = await srcFactory.transferUserFunds(
         orderHash, user.address, srcChainConfig.MockUSDT, totalCommitted
@@ -525,8 +509,8 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
       console.log("✅ Relayer transferred user funds to source escrow");
       
       const userUSDTAfter = await srcToken.balanceOf(user.address);
-      console.log("User USDT after transfer:", formatUnits(userUSDTAfter, 18));
-      console.log("USDT transferred:", formatUnits(userUSDTBefore - userUSDTAfter, 18));
+      console.log("User USDT after transfer:", formatUnits(userUSDTAfter, 6));
+      console.log("USDT transferred:", formatUnits(userUSDTBefore - userUSDTAfter, 6));
     } else {
       console.log("❌ Not enough filled amount to transfer user funds");
       return;
@@ -536,25 +520,12 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     console.log("\n=== STEP 7: VERIFY DESTINATION ESCROWS CREATED BY FILLORDER ===");
     
     if (successfulDstResolvers.length > 0) {
-      // Create immutables for the first successful resolver to check escrow
-      const firstResolver = successfulDstResolvers[0];
-      const dstImmutables = {
-        orderHash: orderHash,
-        hashlock: hashlock,
-        maker: BigInt(user.address),
-        taker: BigInt(firstResolver.wallet.address),
-        token: BigInt(dstChainConfig.MockDAI),
-        amount: firstResolver.srcAmount,
-        safetyDeposit: (safetyDepositPerUnit * firstResolver.srcAmount) / parseUnits("1", 18),
-        timelocks: timelocks
-      };
-      
       const dstEscrowAddress = await dstFactory.addressOfEscrowDst(dstImmutables);
-      console.log("Destination escrow address (first resolver):", dstEscrowAddress);
+      console.log("Destination escrow address:", dstEscrowAddress);
       
       // Check if tokens were automatically transferred by fillOrder
       const escrowDaiBalance = await dstToken.balanceOf(dstEscrowAddress);
-      console.log("DAI balance in first resolver's escrow:", formatUnits(escrowDaiBalance, 18));
+      console.log("DAI balance in escrow:", formatUnits(escrowDaiBalance, 18));
       
       console.log("✅ fillOrder automatically handled token transfers and escrow creation");
     }
@@ -567,18 +538,6 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     console.log("\n=== STEP 9: DESTINATION ESCROW WITHDRAWAL ===");
     
     if (successfulDstResolvers.length > 0) {
-      const firstResolver = successfulDstResolvers[0];
-      const dstImmutables = {
-        orderHash: orderHash,
-        hashlock: hashlock,
-        maker: BigInt(user.address),
-        taker: BigInt(firstResolver.wallet.address),
-        token: BigInt(dstChainConfig.MockDAI),
-        amount: firstResolver.srcAmount,
-        safetyDeposit: (safetyDepositPerUnit * firstResolver.srcAmount) / parseUnits("1", 18),
-        timelocks: timelocks
-      };
-      
       const dstEscrowAddress = await dstFactory.addressOfEscrowDst(dstImmutables);
       const dstEscrow = new Contract(dstEscrowAddress, ESCROW_ABI, userDst);
       
@@ -591,7 +550,7 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
         
         console.log("✅ Destination escrow withdrawal completed");
         console.log("   - User received DAI tokens at Dutch auction price");
-        console.log("   - Resolver received safety deposit back");
+        console.log("   - Resolvers received safety deposits back");
         
         const userDaiBalanceAfter = await dstToken.balanceOf(user.address);
         console.log("User DAI balance after:", formatUnits(userDaiBalanceAfter, 18));
@@ -613,16 +572,16 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     const resolver3USDTBefore = await srcToken.balanceOf(resolver3Src.address);
     
     console.log("Resolver USDT balances before:");
-    console.log("  Resolver 1:", formatUnits(resolver1USDTBefore, 18));
-    console.log("  Resolver 2:", formatUnits(resolver2USDTBefore, 18));
-    console.log("  Resolver 3:", formatUnits(resolver3USDTBefore, 18));
+    console.log("  Resolver 1:", formatUnits(resolver1USDTBefore, 6));
+    console.log("  Resolver 2:", formatUnits(resolver2USDTBefore, 6));
+    console.log("  Resolver 3:", formatUnits(resolver3USDTBefore, 6));
     
     try {
       const withdrawTx = await srcEscrow.withdrawWithSecret(secret, srcImmutables, { gasLimit: 2000000 });
       await withdrawTx.wait();
       console.log("✅ Source escrow withdrawal completed");
       console.log("   - All resolvers received USDT tokens proportionally");
-      console.log("   - All resolvers received safety deposits back");
+      console.log("   - All resolvers received constant safety deposits back");
       
       // Check resolver balances after
       const resolver1USDTAfter = await srcToken.balanceOf(resolver1Src.address);
@@ -630,9 +589,9 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
       const resolver3USDTAfter = await srcToken.balanceOf(resolver3Src.address);
       
       console.log("Resolver USDT balances after:");
-      console.log("  Resolver 1:", formatUnits(resolver1USDTAfter, 18), "(+", formatUnits(resolver1USDTAfter - resolver1USDTBefore, 18), ")");
-      console.log("  Resolver 2:", formatUnits(resolver2USDTAfter, 18), "(+", formatUnits(resolver2USDTAfter - resolver2USDTBefore, 18), ")");
-      console.log("  Resolver 3:", formatUnits(resolver3USDTAfter, 18), "(+", formatUnits(resolver3USDTAfter - resolver3USDTBefore, 18), ")");
+      console.log("  Resolver 1:", formatUnits(resolver1USDTAfter, 6), "(+", formatUnits(resolver1USDTAfter - resolver1USDTBefore, 6), ")");
+      console.log("  Resolver 2:", formatUnits(resolver2USDTAfter, 6), "(+", formatUnits(resolver2USDTAfter - resolver2USDTBefore, 6), ")");
+      console.log("  Resolver 3:", formatUnits(resolver3USDTAfter, 6), "(+", formatUnits(resolver3USDTAfter - resolver3USDTBefore, 6), ")");
     } catch (error: any) {
       console.log("❌ Source escrow withdrawal failed:", error.reason || error.message);
     }
@@ -643,22 +602,12 @@ describe("🔄 Complete Cross-Chain Swap Flow", () => {
     console.log("- Resolvers used fillOrder to automatically calculate destination amounts");
     console.log("- Dutch auction provided fair, time-based pricing");
     console.log("- Resolvers received USDT proportionally on source chain");  
-    console.log("- All safety deposits returned to resolvers on both chains");
+    console.log("- All CONSTANT safety deposits returned to resolvers on both chains");
     console.log("- Secret-based HTLC provided trustless execution");
     console.log("- Partial fill handling: processed", successfulSrcResolvers.length, "out of", resolvers.length, "resolvers");
+    console.log("- CONSTANT safety deposit per resolver:", formatUnits(CONSTANT_SAFETY_DEPOSIT, 18), "ETH");
     console.log("Source escrow:", srcEscrowAddress);
     if (successfulDstResolvers.length > 0) {
-      const firstResolver = successfulDstResolvers[0];
-      const dstImmutables = {
-        orderHash: orderHash,
-        hashlock: hashlock,
-        maker: BigInt(user.address),
-        taker: BigInt(firstResolver.wallet.address),
-        token: BigInt(dstChainConfig.MockDAI),
-        amount: firstResolver.srcAmount,
-        safetyDeposit: (safetyDepositPerUnit * firstResolver.srcAmount) / parseUnits("1", 18),
-        timelocks: timelocks
-      };
       const dstEscrowAddress = await dstFactory.addressOfEscrowDst(dstImmutables);
       console.log("Destination escrow:", dstEscrowAddress);
     }
