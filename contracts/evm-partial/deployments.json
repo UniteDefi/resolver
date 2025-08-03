@@ -3,28 +3,28 @@
     "base_sepolia": {
       "chainId": 84532,
       "name": "Base Sepolia",
-      "UniteLimitOrderProtocol": "0xA97E6f3e821Bea748491455e8b549624541c3bCD",
-      "UniteEscrowFactory": "0x299A56522b1E1eb0319A52B84c7011dCAfFdEea4",
-      "UniteResolver0": "0xB5b0Be784A50c458dAC31d267EcC6Afde21393EB",
-      "UniteResolver1": "0xcC18E3A586696C21C6AB4e4D9CCE6852eb869228",
+      "UniteLimitOrderProtocol": "0x72a5FD0C87ADF089812e4805B56D878F34915547",
+      "UniteEscrowFactory": "0x6E7bA54E35AdCf92D2B3e98C858D240d3BD0a1CB",
+      "UniteResolver0": "0xbD5BEaE49F892610A6eD579cEf63269a02228565",
+      "UniteResolver1": "0x5EC54b3Cebf338343022Dc141d987050dd004941",
       "UniteResolver2": "0x518aBAcDb21924F476Eda85cC47B2F43bA834319",
       "UniteResolver3": "0x9C04003f13447ecb51651B74966Edf196F2AD1C5",
-      "MockUSDT": "0x725437B77BEFb4418Dd91B91E6d736a52Cf8fd9A",
-      "MockDAI": "0x4B16066062aC208ED722DE1A043A6d14857f26f2",
-      "MockWrappedNative": "0x159F8080B5BAEA5B681675cEC2f7fbC58D7ef734"
+      "MockUSDT": "0x5bab363F119b712F18Bb8d4fC6915f5bBB73Bc3f",
+      "MockDAI": "0x0f3DE654D774EF228aF8705ced579CB92b7d776c",
+      "MockWrappedNative": "0xd78420cD15e24b54623ddFe53b4226AB1875579B"
     },
     "arb_sepolia": {
       "chainId": 421614,
       "name": "Arbitrum Sepolia",
-      "UniteLimitOrderProtocol": "0x20BD36142F24D656373a3BD94194009045A07244",
-      "UniteEscrowFactory": "0xfdF57804735277Dd87332DcAB6F6D1e446C0D3eB",
-      "UniteResolver0": "0x2F82563689c75Bc987038b1584f3F9c306a4c93D",
-      "UniteResolver1": "0xC664f2381969E059601E000Cd6775559bC0DBB60",
+      "UniteLimitOrderProtocol": "0x8F65f257A27681B80AE726BCbEdE186DCA702746",
+      "UniteEscrowFactory": "0xF704A173a3Ba9B7Fc0686d14C0cD94fce60102B7",
+      "UniteResolver0": "0x80A2EDaB44AD892d477F6B80fAa06881Fb52Af5B",
+      "UniteResolver1": "0x39853F411466B2E908AD61E08D6c12f1aC7e006b",
       "UniteResolver2": "0xbFA770A14aA17cE07D55b21e84Ef09c2d5AdD959",
       "UniteResolver3": "0x5a96bc5356b90dED42926227F214d55cEb1C7c5E",
-      "MockUSDT": "0xffaD6Ca8c4060FE34F5848cf338c8cC681941278",
-      "MockDAI": "0xA1bde0809362E4faC16a0f7E0C654aACCa956807",
-      "MockWrappedNative": "0x75784eC4AE2826FFF0ecC6C7bEc9971EBf607Ad7"
+      "MockUSDT": "0x30ad93E8EeA74fd5Ee552f57E594407E084EFD8F",
+      "MockDAI": "0x33C166c2E8966Eb34D366C764cfA9D31b62d4d3e",
+      "MockWrappedNative": "0x37a7a300c823bA1f95C900245926f4CEa9cf1c7D"
     },
     "eth_sepolia": {
       "chainId": 11155111,
