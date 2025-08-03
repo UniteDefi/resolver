@@ -88,6 +88,8 @@ export class XRPLHTLCFactory {
           isSource: true,
           finishAfter: escrowTx.FinishAfter,
           cancelAfter: escrowTx.CancelAfter,
+          fulfilled: undefined,
+          cancelled: undefined,
         };
         
         if (!this.escrows.has(order.orderHash)) {
@@ -179,6 +181,8 @@ export class XRPLHTLCFactory {
           isSource: false,
           finishAfter: escrowTx.FinishAfter,
           cancelAfter: escrowTx.CancelAfter,
+          fulfilled: undefined,
+          cancelled: undefined,
         };
         
         if (!this.escrows.has(order.orderHash)) {
