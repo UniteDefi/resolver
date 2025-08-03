@@ -29,4 +29,22 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Already initialized")]
+    AlreadyInitialized {},
+
+    #[error("Not initialized")]
+    NotInitialized {},
+
+    #[error("Invalid partial amount")]
+    InvalidPartialAmount {},
+
+    #[error("Invalid time")]
+    InvalidTime {},
+
+    #[error("Invalid caller")]
+    InvalidCaller {},
+
+    #[error("First resolver already set")]
+    FirstResolverAlreadySet {},
 }
