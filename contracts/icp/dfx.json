@@ -1,9 +1,26 @@
 {
   "version": 1,
   "canisters": {
-    "counter": {
+    "unite_limit_order_protocol": {
       "type": "motoko",
-      "main": "src/counter/main.mo"
+      "main": "src/unite/UniteLimitOrderProtocol.mo"
+    },
+    "unite_escrow_factory": {
+      "type": "motoko",
+      "main": "src/unite/UniteEscrowFactory.mo"
+    },
+    "unite_resolver": {
+      "type": "motoko",
+      "main": "src/unite/UniteResolver.mo",
+      "dependencies": ["unite_escrow_factory", "unite_limit_order_protocol"]
+    },
+    "mock_usdt": {
+      "type": "motoko",
+      "main": "src/unite/MockToken.mo"
+    },
+    "mock_dai": {
+      "type": "motoko",
+      "main": "src/unite/MockToken.mo"
     }
   },
   "defaults": {
