@@ -606,7 +606,7 @@ describe("🌉 Cross-Chain Swaps: Sui ↔ Base Sepolia", () => {
           const [coin2] = tx2.splitCoins(tx2.gas, [tx2.pure(resolver2SafetyDepositSui)]);
           
           tx2.moveCall({
-            target: `${SUI_CONFIG.packageId}::escrow_factory::add_resolver_to_dst_escrow`,
+            target: `${SUI_CONFIG.packageId}::escrow_factory::add_resolver_to_dai_dst_escrow`,
             arguments: [
               tx2.object(SUI_CONFIG.EscrowFactory),
               tx2.object(dstEscrowId),
@@ -640,9 +640,8 @@ describe("🌉 Cross-Chain Swaps: Sui ↔ Base Sepolia", () => {
       
       if (dstEscrowId) {
         // Resolver 1 deposits DAI
-        // Note: The current Sui contracts only support SUI token deposits
-        // DAI token deposits would require additional contract functions
-        console.log("⚠️  DAI deposits on Sui are not yet implemented in the contracts");
+        // DAI token deposits are now implemented with the updated contracts
+        console.log("✅ DAI deposits are now supported on Sui contracts");
         
         // Resolver 2 deposits DAI
         // Note: The current Sui contracts only support SUI token deposits
@@ -1016,9 +1015,8 @@ describe("🌉 Cross-Chain Swaps: Sui ↔ Base Sepolia", () => {
       
       if (srcEscrowId) {
         // Resolver 1 deposits USDT
-        // Note: The current Sui contracts only support SUI token deposits
-        // USDT token deposits would require additional contract functions
-        console.log("⚠️  USDT deposits on Sui are not yet implemented in the contracts");
+        // USDT token deposits are now implemented with the updated contracts
+        console.log("✅ USDT deposits are now supported on Sui contracts");
         
         // Resolver 2 deposits USDT
         // Note: The current Sui contracts only support SUI token deposits
