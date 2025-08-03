@@ -11,7 +11,9 @@ module unite::escrow_factory {
     use sui::dynamic_field;
     use sui::table::{Self, Table};
 
-    use unite::escrow::{Self, SuiEscrow, EscrowCap, Timelocks};
+    use unite::escrow::{Self, SuiEscrow, CoinEscrow, EscrowCap, Timelocks};
+    use unite::mock_dai::{MOCK_DAI};
+    use unite::mock_usdt::{MOCK_USDT};
 
     // === Errors ===
     const EInsufficientSafetyDeposit: u64 = 1;
@@ -502,5 +504,150 @@ module unite::escrow_factory {
     
     public fun get_factory_admin(factory: &EscrowFactory): address {
         factory.admin
+    }
+    
+    // === DAI Escrow Functions ===
+    
+    /// Create DAI destination escrow with partial amount
+    public fun create_dai_dst_escrow_partial(
+        factory: &mut EscrowFactory,
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        total_amount: u64,
+        safety_deposit_per_unit: u64,
+        timelocks: Timelocks,
+        src_cancellation_timestamp: u64,
+        partial_amount: u64,
+        resolver: address,
+        safety_deposit: Coin<SUI>,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ): ID {
+        assert!(partial_amount > 0 && partial_amount <= total_amount, EInvalidAmount);
+        
+        let safety_deposit_value = coin::value(&safety_deposit);
+        let required_safety_deposit = (safety_deposit_per_unit * partial_amount) / total_amount;
+        assert!(safety_deposit_value >= required_safety_deposit, EInsufficientSafetyDeposit);
+        
+        let escrow_id = if (table::contains(&factory.dst_escrows, order_hash)) {
+            let existing_escrow_id = *table::borrow(&factory.dst_escrows, order_hash);
+            
+            if (!table::contains(&factory.resolver_partial_amounts, order_hash)) {
+                table::add(&mut factory.resolver_partial_amounts, order_hash, table::new(ctx));
+                table::add(&mut factory.resolver_safety_deposits, order_hash, table::new(ctx));
+            };
+            
+            let resolver_amounts = table::borrow_mut(&mut factory.resolver_partial_amounts, order_hash);
+            let resolver_deposits = table::borrow_mut(&mut factory.resolver_safety_deposits, order_hash);
+            
+            assert!(!table::contains(resolver_amounts, resolver), EResolverAlreadyExists);
+            
+            table::add(resolver_amounts, resolver, partial_amount);
+            table::add(resolver_deposits, resolver, safety_deposit_value);
+            
+            if (table::contains(&factory.total_filled_amounts, order_hash)) {
+                let current_total = table::remove(&mut factory.total_filled_amounts, order_hash);
+                table::add(&mut factory.total_filled_amounts, order_hash, current_total + partial_amount);
+            } else {
+                table::add(&mut factory.total_filled_amounts, order_hash, partial_amount);
+            };
+            
+            transfer::public_transfer(safety_deposit, factory.admin);
+            existing_escrow_id
+        } else {
+            let (escrow, _cap) = escrow::create_coin_escrow_dst<MOCK_DAI>(
+                order_hash,
+                hashlock,
+                maker,
+                taker,
+                total_amount,
+                safety_deposit_per_unit,
+                timelocks,
+                src_cancellation_timestamp,
+                resolver,
+                partial_amount,
+                safety_deposit,
+                b"unite::mock_dai::MOCK_DAI",
+                clock,
+                ctx
+            );
+            
+            let escrow_id = object::id(&escrow);
+            table::add(&mut factory.dst_escrows, order_hash, escrow_id);
+            
+            let mut resolver_amounts = table::new(ctx);
+            let mut resolver_deposits = table::new(ctx);
+            table::add(&mut resolver_amounts, resolver, partial_amount);
+            table::add(&mut resolver_deposits, resolver, safety_deposit_value);
+            
+            table::add(&mut factory.resolver_partial_amounts, order_hash, resolver_amounts);
+            table::add(&mut factory.resolver_safety_deposits, order_hash, resolver_deposits);
+            table::add(&mut factory.total_filled_amounts, order_hash, partial_amount);
+            
+            transfer::public_share_object(escrow);
+            transfer::public_transfer(_cap, factory.admin);
+            escrow_id
+        };
+
+        event::emit(EscrowCreatedEvent {
+            escrow_id,
+            order_hash,
+            is_source: false,
+            factory_id: object::id(factory),
+        });
+
+        event::emit(ResolverAddedEvent {
+            escrow_id,
+            order_hash,
+            resolver,
+            partial_amount,
+            safety_deposit: safety_deposit_value,
+        });
+
+        escrow_id
+    }
+    
+    /// Add resolver to existing DAI destination escrow
+    public fun add_resolver_to_dai_dst_escrow(
+        factory: &mut EscrowFactory,
+        escrow: &mut CoinEscrow<MOCK_DAI>,
+        order_hash: vector<u8>,
+        resolver: address,
+        partial_amount: u64,
+        safety_deposit: Coin<SUI>,
+        ctx: &mut TxContext
+    ) {
+        assert!(table::contains(&factory.dst_escrows, order_hash), EEscrowNotFound);
+        
+        // Check if resolver already participated
+        let resolver_amounts = table::borrow_mut(&mut factory.resolver_partial_amounts, order_hash);
+        let resolver_deposits = table::borrow_mut(&mut factory.resolver_safety_deposits, order_hash);
+        
+        assert!(!table::contains(resolver_amounts, resolver), EResolverAlreadyExists);
+        
+        let safety_deposit_value = coin::value(&safety_deposit);
+        
+        // Add resolver to escrow
+        escrow::add_resolver_to_coin_escrow(escrow, resolver, partial_amount, safety_deposit, ctx);
+        
+        // Track in factory
+        table::add(resolver_amounts, resolver, partial_amount);
+        table::add(resolver_deposits, resolver, safety_deposit_value);
+        
+        // Update total filled amount
+        let current_total = table::remove(&mut factory.total_filled_amounts, order_hash);
+        table::add(&mut factory.total_filled_amounts, order_hash, current_total + partial_amount);
+
+        let escrow_id = *table::borrow(&factory.dst_escrows, order_hash);
+        
+        event::emit(ResolverAddedEvent {
+            escrow_id,
+            order_hash,
+            resolver,
+            partial_amount,
+            safety_deposit: safety_deposit_value,
+        });
     }
 }
