@@ -7,12 +7,12 @@ mod UniteLimitOrderProtocol {
         contract_address_const
     };
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use super::interfaces::iunite_order::{Order, IUniteOrder};
-    use super::interfaces::iunite_order_protocol::IUniteOrderProtocol;
-    use super::interfaces::iorder_mixin::{IOrderMixin, TakerTraits};
-    use super::libraries::unite_order_lib;
-    use super::libraries::unite_signature_validator;
-    use super::libraries::dutch_auction_lib;
+    use crate::interfaces::iunite_order::{Order, IUniteOrder};
+    use crate::interfaces::iunite_order_protocol::IUniteOrderProtocol;
+    use crate::interfaces::iorder_mixin::{IOrderMixin, TakerTraits};
+    use crate::libraries::unite_order_lib;
+    use crate::libraries::unite_signature_validator;
+    use crate::libraries::dutch_auction_lib;
 
     #[storage]
     struct Storage {
