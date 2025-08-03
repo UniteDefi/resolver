@@ -6,9 +6,9 @@ mod UniteEscrowFactory {
     };
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use super::interfaces::iescrow_factory::IEscrowFactory;
-    use super::interfaces::ibase_escrow::Immutables;
-    use super::libraries::immutables_lib;
+    use crate::interfaces::iescrow_factory::IEscrowFactory;
+    use crate::interfaces::ibase_escrow::Immutables;
+    use crate::libraries::immutables_lib;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
