@@ -2,12 +2,12 @@ use starknet::ContractAddress;
 use super::iunite_order::Order;
 
 #[derive(Drop, Serde)]
-struct TakerTraits {
+pub struct TakerTraits {
     value: u256,
 }
 
 #[starknet::interface]
-trait IOrderMixin<TContractState> {
+pub trait IOrderMixin<TContractState> {
     fn fill_order_args(
         ref self: TContractState,
         order: Order,
