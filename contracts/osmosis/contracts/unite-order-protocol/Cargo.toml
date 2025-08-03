@@ -25,6 +25,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 sha2 = { workspace = true }
+hex = "0.4"
 
 [dev-dependencies]
 cw-multi-test = "0.18"
