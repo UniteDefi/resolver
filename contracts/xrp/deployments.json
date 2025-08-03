@@ -1,0 +1,37 @@
+{
+  "xrpl": {
+    "testnet": {
+      "network": "testnet",
+      "name": "XRPL Testnet",
+      "deployedAt": "2025-08-03T15:06:40.584Z",
+      "serverUrl": "wss://s.altnet.rippletest.net:51233",
+      "XRPLHTLCFactory": "initialized",
+      "XRPLOrderProtocol": "initialized",
+      "UniteResolver0": "rBBgppLwei21kZRcpBdFhiqbHPKBdiKdsc",
+      "UniteResolver1": "rGFFBH3M6HTKoRyx6knDbpcCq3DTNKYSJB",
+      "UniteResolver2": "rLE9TktDPwYVW89gtUGEu5QGf4TmaeXfpQ",
+      "UniteResolver3": "rMcdGqR6GH1NrpwRjLQXrYyipDjBuLBYSC",
+      "deployer": "rLvgxqRDqw16Sa8CYyoqtqUjeaTKbvMNp3",
+      "user": "rKd492FUL6J9X2cQA24tecnF38ewc9XmKZ",
+      "resolver0": "rBBgppLwei21kZRcpBdFhiqbHPKBdiKdsc",
+      "resolver1": "rGFFBH3M6HTKoRyx6knDbpcCq3DTNKYSJB",
+      "resolver2": "rLE9TktDPwYVW89gtUGEu5QGf4TmaeXfpQ",
+      "resolver3": "rMcdGqR6GH1NrpwRjLQXrYyipDjBuLBYSC"
+    }
+  },
+  "evm": {
+    "base_sepolia": {
+      "chainId": 84532,
+      "name": "Base Sepolia",
+      "UniteLimitOrderProtocol": "0x734F3DDcE982B1b966B4234C53a1365D44980692",
+      "UniteEscrowFactory": "0xbd8ce7E7B9F70275DbCB9441aE7b5CA4F472305d",
+      "UniteResolver0": "0x70de6F2Db310a9b7725597619E330061542a6a49",
+      "UniteResolver1": "0x5cE6D9374c66742D25a08A718FF5e99728427008",
+      "UniteResolver2": "0x531B38CB2930dc6BF0dcB9678E02A61b926D0c87",
+      "UniteResolver3": "0x006cca7e620908E42F921D6B821A4C604A6a4f5C",
+      "MockUSDT": "0x5bab363F119b712F18Bb8d4fC6915f5bBB73Bc3f",
+      "MockDAI": "0x0f3DE654D774EF228aF8705ced579CB92b7d776c",
+      "MockWrappedNative": "0xd78420cD15e24b54623ddFe53b4226AB1875579B"
+    }
+  }
+}
