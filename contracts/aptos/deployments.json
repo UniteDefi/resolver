@@ -3,15 +3,15 @@
     "base_sepolia": {
       "chainId": 84532,
       "name": "Base Sepolia",
-      "UniteLimitOrderProtocol": "0x8F65f257A27681B80AE726BCbEdE186DCA702746",
-      "UniteEscrowFactory": "0xF704A173a3Ba9B7Fc0686d14C0cD94fce60102B7",
-      "UniteResolver0": "0x80A2EDaB44AD892d477F6B80fAa06881Fb52Af5B",
-      "UniteResolver1": "0x39853F411466B2E908AD61E08D6c12f1aC7e006b",
-      "UniteResolver2": "0x518aBAcDb21924F476Eda85cC47B2F43bA834319",
-      "UniteResolver3": "0x9C04003f13447ecb51651B74966Edf196F2AD1C5",
-      "MockUSDT": "0x97a2d8Dfece96252518a4327aFFf40B61A0a025A",
-      "MockDAI": "0x45A3AF79Ad654e75114988Abd92615eD79754eF5",
-      "MockWrappedNative": "0x67f4840a271fd6f130324F576312eCd806Cc9545"
+      "UniteLimitOrderProtocol": "0x734F3DDcE982B1b966B4234C53a1365D44980692",
+      "UniteEscrowFactory": "0xbd8ce7E7B9F70275DbCB9441aE7b5CA4F472305d",
+      "UniteResolver0": "0x70de6F2Db310a9b7725597619E330061542a6a49",
+      "UniteResolver1": "0x5cE6D9374c66742D25a08A718FF5e99728427008",
+      "UniteResolver2": "0x531B38CB2930dc6BF0dcB9678E02A61b926D0c87",
+      "UniteResolver3": "0x006cca7e620908E42F921D6B821A4C604A6a4f5C",
+      "MockUSDT": "0x5bab363F119b712F18Bb8d4fC6915f5bBB73Bc3f",
+      "MockDAI": "0x0f3DE654D774EF228aF8705ced579CB92b7d776c",
+      "MockWrappedNative": "0xd78420cD15e24b54623ddFe53b4226AB1875579B"
     }
   },
   "aptos": {
