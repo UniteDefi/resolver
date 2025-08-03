@@ -70,8 +70,9 @@ contract UniteEscrowFactory is IEscrowFactory, Ownable {
     ) public payable returns (address) {
         if (partialAmount == 0 || partialAmount > immutables.amount) revert InvalidAmount();
         
-        // Calculate proportional safety deposit
-        uint256 requiredSafetyDeposit = (immutables.safetyDeposit * partialAmount) / immutables.amount;
+        // CONSTANT SAFETY DEPOSIT: Use the safety deposit from immutables directly
+        // This represents the fixed safety deposit amount per resolver
+        uint256 requiredSafetyDeposit = immutables.safetyDeposit;
         if (msg.value < requiredSafetyDeposit) revert InsufficientSafetyDeposit();
         
         // Check if resolver already participated
@@ -141,10 +142,12 @@ contract UniteEscrowFactory is IEscrowFactory, Ownable {
         uint256 partialAmount,
         address resolver
     ) public payable returns (address) {
-        if (partialAmount == 0 || partialAmount > immutables.amount) revert InvalidAmount();
+        // For destination escrows, partialAmount is in destination token (DAI)
+        // We validate that partialAmount > 0 but skip the cross-token comparison
+        if (partialAmount == 0) revert InvalidAmount();
         
-        // Calculate proportional safety deposit
-        uint256 requiredSafetyDeposit = (immutables.safetyDeposit * partialAmount) / immutables.amount;
+        // CONSTANT SAFETY DEPOSIT: Use the safety deposit from immutables directly
+        uint256 requiredSafetyDeposit = immutables.safetyDeposit;
         if (msg.value < requiredSafetyDeposit) revert InsufficientSafetyDeposit();
         
         // Check if resolver already participated
@@ -184,7 +187,7 @@ contract UniteEscrowFactory is IEscrowFactory, Ownable {
             UniteEscrow(payable(escrow)).addResolverSafetyDeposit{value: msg.value}(resolver, partialAmount);
         }
         
-        // Track this resolver's participation
+        // Track this resolver's participation (in destination token amounts)
         resolverPartialAmounts[immutables.orderHash][resolver] = partialAmount;
         resolverSafetyDeposits[immutables.orderHash][resolver] = msg.value;
         totalFilledAmounts[immutables.orderHash] += partialAmount;
