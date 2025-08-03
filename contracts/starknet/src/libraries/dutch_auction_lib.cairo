@@ -1,6 +1,6 @@
 use starknet::get_block_timestamp;
 
-fn get_current_price(
+pub fn get_current_price(
     start_price: u256,
     end_price: u256,
     auction_start_time: u64,
@@ -24,7 +24,7 @@ fn get_current_price(
     start_price - (price_decrease * time_elapsed.into()) / total_duration.into()
 }
 
-fn calculate_taking_amount(
+pub fn calculate_taking_amount(
     making_amount: u256,
     start_price: u256,
     end_price: u256,
