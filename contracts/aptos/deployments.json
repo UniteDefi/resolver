@@ -16,31 +16,30 @@
   },
   "aptos": {
     "testnet": {
-      "chainId": 2,
-      "name": "Aptos Testnet",
-      "packageAddress": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c",
       "network": "testnet",
-      "modules": {
-        "escrow": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::escrow",
-        "escrow_factory": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::escrow_factory",
-        "limit_order_protocol": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::limit_order_protocol",
-        "resolver": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::resolver",
-        "test_coin": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin"
-      },
-      "coins": {
-        "TestUSDT": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestUSDT",
-        "TestDAI": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c::test_coin::TestDAI"
-      },
-      "resolvers": [
-        "0x70dfa2520c9fa9898a67cc864916022b06e935c5ff2f7318e9e92c69d0ac79df",
-        "0xded89f5e3c5c9a1d403e0f73b3736654c3f1825b1a3c015927f2771f0ff27e90",
-        "0x7c044971bf5e7df2e1d1a661c57276252c6b64788e39973401424d833f5035db",
-        "0x12ac4b2897cde3749781833a72496ff3ea8f42a356f6d7bd90cb50f24d020690"
-      ],
-      "deployment_info": {
-        "deployed_at": "2025-08-03T07:48:47.584Z",
-        "deployer_address": "0x31dbfb848f2a307bdcad5abcd23cd831b093a90caab022518597e6ea6d1b187c"
-      }
+      "chainId": 2,
+      "packageAddress": "0x4d876adc1d506882f9abf11231c2dbaaa7ec5e32fba5a97b00caf26cef9596fc",
+      "limitOrderProtocol": "0x4d876adc1d506882f9abf11231c2dbaaa7ec5e32fba5a97b00caf26cef9596fc",
+      "escrowFactory": "0x4d876adc1d506882f9abf11231c2dbaaa7ec5e32fba5a97b00caf26cef9596fc",
+      "resolver0": "0xb8d5c64dc92eb50fd2dcee6ad402b618a0fea6f56c0d07dc14e7fa5dc641eb6c",
+      "resolver1": "0xd5432082e11d2918f829300507ed476d0b993eaad38b69acf8c6fa0f3c0c4170",
+      "resolver2": "0xa1f62f0c85bd520cb7a0397f1886502b1adef45df54a0baba63a47e8e9bf587a",
+      "resolver3": "0x7036f7ac4a4c3beed9ff9635df4a9b0afd6fa195c0167fb6558cb72470157d93",
+      "testUSDT": "0x4d876adc1d506882f9abf11231c2dbaaa7ec5e32fba5a97b00caf26cef9596fc::test_coin::TestUSDT",
+      "testDAI": "0x4d876adc1d506882f9abf11231c2dbaaa7ec5e32fba5a97b00caf26cef9596fc::test_coin::TestDAI"
+    },
+    "devnet": {
+      "network": "devnet",
+      "chainId": 3,
+      "packageAddress": "0x6ef740aaae02c6ebff8a26d3d65051eead3ac7c127b0356258114d6a837c9ee7",
+      "limitOrderProtocol": "0x6ef740aaae02c6ebff8a26d3d65051eead3ac7c127b0356258114d6a837c9ee7",
+      "escrowFactory": "0x6ef740aaae02c6ebff8a26d3d65051eead3ac7c127b0356258114d6a837c9ee7",
+      "resolver0": "0x5236bbd748a422297919695c74a3a141c606df292544e00896e8931e31203761",
+      "resolver1": "0x2026c1e6f604a1a12536bf3a4df2f74e6f8b27a7b763e93ffcfdfa5bc909cdef",
+      "resolver2": "0x3ff107029ec08622c67e6eb59892435e00a2f3e2efd0ae4ec20a682859556c4e",
+      "resolver3": "0x24156cbda39ad112f8e19d2c2d91084f579e78297dd122ac66bc291e91c52fe7",
+      "testUSDT": "0x6ef740aaae02c6ebff8a26d3d65051eead3ac7c127b0356258114d6a837c9ee7::test_coin::TestUSDT",
+      "testDAI": "0x6ef740aaae02c6ebff8a26d3d65051eead3ac7c127b0356258114d6a837c9ee7::test_coin::TestDAI"
     }
   }
 }
