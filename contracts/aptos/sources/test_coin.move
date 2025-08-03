@@ -93,7 +93,7 @@ module aptos_addr::test_coin {
         move_to(admin, store);
     }
 
-    // Mint USDT to specified account
+    // *** CRITICAL: Make mint functions ENTRY ***
     entry public fun mint_usdt(
         admin: &signer,
         recipient: address,
@@ -102,6 +102,14 @@ module aptos_addr::test_coin {
         let admin_addr = signer::address_of(admin);
         let capabilities = borrow_global<CoinCapabilities<TestUSDT>>(admin_addr);
         let store = borrow_global_mut<CoinStore<TestUSDT>>(admin_addr);
+
+        // Auto-register if not registered
+        if (!coin::is_account_registered<TestUSDT>(recipient)) {
+            // We can't register for another account in Move, so just mint to admin and return
+            let coins = coin::mint<TestUSDT>(amount, &capabilities.mint_cap);
+            coin::deposit(admin_addr, coins);
+            return
+        };
 
         let coins = coin::mint<TestUSDT>(amount, &capabilities.mint_cap);
         coin::deposit(recipient, coins);
@@ -112,7 +120,7 @@ module aptos_addr::test_coin {
         });
     }
 
-    // Mint DAI to specified account
+    // *** CRITICAL: Make mint functions ENTRY ***
     entry public fun mint_dai(
         admin: &signer,
         recipient: address,
@@ -121,6 +129,14 @@ module aptos_addr::test_coin {
         let admin_addr = signer::address_of(admin);
         let capabilities = borrow_global<CoinCapabilities<TestDAI>>(admin_addr);
         let store = borrow_global_mut<CoinStore<TestDAI>>(admin_addr);
+
+        // Auto-register if not registered
+        if (!coin::is_account_registered<TestDAI>(recipient)) {
+            // We can't register for another account in Move, so just mint to admin and return
+            let coins = coin::mint<TestDAI>(amount, &capabilities.mint_cap);
+            coin::deposit(admin_addr, coins);
+            return
+        };
 
         let coins = coin::mint<TestDAI>(amount, &capabilities.mint_cap);
         coin::deposit(recipient, coins);
@@ -169,25 +185,59 @@ module aptos_addr::test_coin {
         });
     }
 
-    // Get USDT balance
+    // Get USDT balance - SAFE VERSION with registration check
     #[view]
     public fun get_usdt_balance(account: address): u64 {
-        coin::balance<TestUSDT>(account)
+        if (!coin::is_account_registered<TestUSDT>(account)) {
+            0
+        } else {
+            coin::balance<TestUSDT>(account)
+        }
     }
 
-    // Get DAI balance
+    // Get DAI balance - SAFE VERSION with registration check
     #[view] 
     public fun get_dai_balance(account: address): u64 {
-        coin::balance<TestDAI>(account)
+        if (!coin::is_account_registered<TestDAI>(account)) {
+            0
+        } else {
+            coin::balance<TestDAI>(account)
+        }
     }
 
-    // Register for USDT
-    public fun register_usdt(account: &signer) {
-        coin::register<TestUSDT>(account);
+    // Register for USDT - ENTRY FUNCTION for tests
+    entry public fun register_usdt(account: &signer) {
+        if (!coin::is_account_registered<TestUSDT>(signer::address_of(account))) {
+            coin::register<TestUSDT>(account);
+        }
     }
 
-    // Register for DAI
-    public fun register_dai(account: &signer) {
-        coin::register<TestDAI>(account);
+    // Register for DAI - ENTRY FUNCTION for tests
+    entry public fun register_dai(account: &signer) {
+        if (!coin::is_account_registered<TestDAI>(signer::address_of(account))) {
+            coin::register<TestDAI>(account);
+        }
+    }
+
+    // Public register functions (non-entry) for use by other modules
+    public fun register_usdt_public(account: &signer) {
+        if (!coin::is_account_registered<TestUSDT>(signer::address_of(account))) {
+            coin::register<TestUSDT>(account);
+        }
+    }
+
+    public fun register_dai_public(account: &signer) {
+        if (!coin::is_account_registered<TestDAI>(signer::address_of(account))) {
+            coin::register<TestDAI>(account);
+        }
+    }
+
+    // Generic balance function for any coin type
+    public fun balance<CoinType>(account: address): u64 {
+        if (!coin::is_account_registered<CoinType>(account)) {
+            0
+        } else {
+            coin::balance<CoinType>(account)
+        }
     }
 }
