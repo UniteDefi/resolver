@@ -82,7 +82,44 @@ module aptos_addr::escrow_factory {
         let safety_deposit_apt = coin::withdraw<AptosCoin>(resolver, safety_deposit_apt_amount);
         let factory_addr = @aptos_addr;
         
-        let _escrow_addr = create_src_escrow_partial<CoinType>(
+        let _escrow_addr = create_src_escrow_partial_internal<CoinType>(
+            resolver,
+            immutables,
+            partial_amount,
+            safety_deposit_apt,
+            factory_addr
+        );
+    }
+
+    // *** CRITICAL: ENTRY FUNCTION for create_src_escrow_partial ***
+    entry public fun create_src_escrow_partial<CoinType>(
+        resolver: &signer,
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        token: address,
+        amount: u64,
+        safety_deposit: u64,
+        timelocks: u64,
+        partial_amount: u64,
+        safety_deposit_apt_amount: u64,
+    ) acquires EscrowFactory {
+        let immutables = escrow::create_immutables(
+            order_hash,
+            hashlock,
+            maker,
+            taker,
+            token,
+            amount,
+            safety_deposit,
+            timelocks
+        );
+        
+        let safety_deposit_apt = coin::withdraw<AptosCoin>(resolver, safety_deposit_apt_amount);
+        let factory_addr = @aptos_addr;
+        
+        let _escrow_addr = create_src_escrow_partial_internal<CoinType>(
             resolver,
             immutables,
             partial_amount,
@@ -156,8 +193,8 @@ module aptos_addr::escrow_factory {
         move_to(admin, factory);
     }
 
-    // Create source escrow with partial amount
-    public fun create_src_escrow_partial<CoinType>(
+    // Create source escrow with partial amount (internal function)
+    public fun create_src_escrow_partial_internal<CoinType>(
         resolver: &signer,
         immutables: Immutables,
         partial_amount: u64,
@@ -389,7 +426,6 @@ module aptos_addr::escrow_factory {
         // Mark escrow as funded
         escrow::mark_user_funded<CoinType>(escrow_addr);
     }
-
 
     // View functions
     #[view]
