@@ -1,19 +1,22 @@
 export interface XRPLHTLCOrder {
   orderHash: string;
+  salt: string; // Random salt for order uniqueness
   maker: string; // User creating the order
-  taker?: string; // Optional specific taker
+  receiver: string | undefined; // Optional receiver address (if different from maker)
+  taker: string | undefined; // Optional specific taker (deprecated, use receiver)
   makerAsset: string; // Token address on source chain
   takerAsset: string; // "XRP" for XRP Ledger
   makingAmount: string; // Amount in source chain units
   takingAmount: string; // Amount in XRP drops
   deadline: number;
+  nonce: number; // User nonce for replay protection
   srcChainId: number;
   dstChainId: number; // XRPL identifier
   hashlock: string;
-  auctionStartTime?: number;
-  auctionEndTime?: number;
-  startPrice?: string;
-  endPrice?: string;
+  auctionStartTime: number; // Dutch auction start time
+  auctionEndTime: number; // Dutch auction end time
+  startPrice: string; // Starting price (higher) in 18 decimal precision
+  endPrice: string; // Ending price (lower) in 18 decimal precision
 }
 
 export interface XRPLEscrowDetails {
@@ -27,10 +30,10 @@ export interface XRPLEscrowDetails {
   txHash: string;
   sequence: number;
   isSource: boolean; // true if source chain escrow, false if destination
-  finishAfter?: number;
-  cancelAfter?: number;
-  fulfilled?: boolean;
-  cancelled?: boolean;
+  finishAfter: number | undefined;
+  cancelAfter: number | undefined;
+  fulfilled: boolean | undefined;
+  cancelled: boolean | undefined;
 }
 
 export interface XRPLResolverCommitment {
