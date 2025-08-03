@@ -21,12 +21,12 @@ interface TestScenario {
 // Test wallets
 const USER_WALLETS = [
     "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c",
-    "EQC7VNrqAQe1M0_C9-0CwkGlbqOorDjsR0gHNvS8xL8fW9Dg"
+    "EQBvI0aFLnw2QbZgjMPCLRdtRHxhUyinQudg6sdiohIwg5jL"
 ];
 
 const RESOLVER_WALLETS = [
-    "EQDQoc5M1iAZlPIHC1k3o6wHAn6vJBD_D4vdBEkEtWgxU5_W",
-    "EQBM3dofFmSHQGvKqGIgxQ3zIvRjM3HRXbnLlNDt3JkIJeZ9"
+    "EQBIhPuWmjT7fP-VomuTWseE8JNWv2q7QYfsVQ1IZwnMk8wL",
+    "EQBvW8Z6adnmhCgn10AN6rmAMsviuPAVDN3w3DQbwUAi__Dys"
 ];
 
 // Minimum balance requirements
