@@ -368,7 +368,8 @@ module unite::limit_order_protocol {
         }
     }
     
-    public fun is_order_fully_filled(protocol: &LimitOrderProtocol, order_hash: vector<u8>): bool {
+    public fun is_order_fully_filled(protocol: &LimitOrderProtocol, order: Order): bool {
+        let order_hash = hash_order(&order);
         is_order_invalidated(protocol, order_hash)
     }
     
@@ -388,6 +389,64 @@ module unite::limit_order_protocol {
     public fun get_protocol_admin(protocol: &LimitOrderProtocol): address {
         protocol.admin
     }
+    
+    public fun get_remaining_amount_by_order(protocol: &LimitOrderProtocol, order: Order): u64 {
+        get_remaining_amount(protocol, &order)
+    }
+    
+    public fun update_fill_amount(protocol: &mut LimitOrderProtocol, order: Order, amount: u64) {
+        let order_hash = hash_order(&order);
+        if (table::contains(&protocol.filled_amounts, order_hash)) {
+            let current_filled = table::borrow_mut(&mut protocol.filled_amounts, order_hash);
+            *current_filled = *current_filled + amount;
+        } else {
+            table::add(&mut protocol.filled_amounts, order_hash, amount);
+        };
+        
+        // Check if order is fully filled
+        let total_filled = get_filled_amount(protocol, order_hash);
+        if (total_filled >= order.making_amount) {
+            if (!table::contains(&protocol.invalidated_orders, order_hash)) {
+                table::add(&mut protocol.invalidated_orders, order_hash, true);
+            };
+        };
+    }
+    
+    public fun new_order(
+        salt: u64,
+        maker: address,
+        receiver: address,
+        maker_asset: vector<u8>,
+        taker_asset: vector<u8>,
+        making_amount: u64,
+        taking_amount: u64,
+        deadline: u64,
+        nonce: u64,
+        src_chain_id: u64,
+        dst_chain_id: u64,
+        auction_start_time: u64,
+        auction_end_time: u64,
+        start_price: u64,
+        end_price: u64,
+    ): Order {
+        Order {
+            salt,
+            maker,
+            receiver,
+            maker_asset,
+            taker_asset,
+            making_amount,
+            taking_amount,
+            deadline,
+            nonce,
+            src_chain_id,
+            dst_chain_id,
+            auction_start_time,
+            auction_end_time,
+            start_price,
+            end_price,
+        }
+    }
 
     // === Order Getters ===
     
@@ -397,6 +456,30 @@ module unite::limit_order_protocol {
     
     public fun get_maker(order: &Order): address {
         order.maker
+    }
+    
+    public fun get_receiver(order: &Order): address {
+        order.receiver
+    }
+    
+    public fun get_order_nonce(order: &Order): u64 {
+        order.nonce
+    }
+    
+    public fun get_auction_start_time(order: &Order): u64 {
+        order.auction_start_time
+    }
+    
+    public fun get_auction_end_time(order: &Order): u64 {
+        order.auction_end_time
+    }
+    
+    public fun get_start_price(order: &Order): u64 {
+        order.start_price
+    }
+    
+    public fun get_end_price(order: &Order): u64 {
+        order.end_price
     }
 
     // === Order Creation Helpers ===
