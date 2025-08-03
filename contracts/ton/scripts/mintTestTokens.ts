@@ -21,17 +21,17 @@ const TEST_WALLETS: WalletInfo[] = [
         name: "User 1"
     },
     {
-        address: "EQC7VNrqAQe1M0_C9-0CwkGlbqOorDjsR0gHNvS8xL8fW9Dg",
+        address: "EQBvI0aFLnw2QbZgjMPCLRdtRHxhUyinQudg6sdiohIwg5jL",
         type: "user", 
         name: "User 2"
     },
     {
-        address: "EQDQoc5M1iAZlPIHC1k3o6wHAn6vJBD_D4vdBEkEtWgxU5_W",
+        address: "EQBIhPuWmjT7fP-VomuTWseE8JNWv2q7QYfsVQ1IZwnMk8wL",
         type: "resolver",
         name: "Resolver 1"
     },
     {
-        address: "EQBM3dofFmSHQGvKqGIgxQ3zIvRjM3HRXbnLlNDt3JkIJeZ9",
+        address: "EQBvW8Z6adnmhCgn10AN6rmAMsviuPAVDN3w3DQbwUAi__Dys",
         type: "resolver",
         name: "Resolver 2"
     }
