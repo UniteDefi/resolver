@@ -1,7 +1,7 @@
 module aptos_addr::resolver {
     use std::signer;
     use std::option;
-    use aptos_framework::coin::{Coin};
+    use aptos_framework::coin::{Self, Coin};
     use aptos_framework::aptos_coin::AptosCoin;
     use aptos_framework::account;
     use aptos_framework::event::{Self, EventHandle};
@@ -60,6 +60,60 @@ module aptos_addr::resolver {
         move_to(owner, resolver);
     }
 
+    // *** CRITICAL: ENTRY FUNCTION for deploy_dst_partial ***
+    entry public fun deploy_dst_partial<CoinType>(
+        resolver_signer: &signer,
+        order_hash: vector<u8>,
+        hashlock: vector<u8>,
+        maker: address,
+        taker: address,
+        token: address,
+        amount: u64,
+        safety_deposit: u64,
+        timelocks: u64,
+        src_cancellation_timestamp: u64,
+        partial_amount: u64,
+        safety_deposit_apt_amount: u64,
+    ) acquires Resolver {
+        let resolver_addr = signer::address_of(resolver_signer);
+        let resolver_data = borrow_global_mut<Resolver>(resolver_addr);
+        
+        let immutables = escrow::create_immutables(
+            order_hash,
+            hashlock,
+            maker,
+            taker,
+            token,
+            amount,
+            safety_deposit,
+            timelocks
+        );
+        
+        let safety_deposit_apt = coin::withdraw<AptosCoin>(resolver_signer, safety_deposit_apt_amount);
+        let tokens = coin::withdraw<CoinType>(resolver_signer, partial_amount);
+        
+        // Create destination escrow
+        let escrow_addr = escrow_factory::create_dst_escrow_partial<CoinType>(
+            resolver_signer, immutables, src_cancellation_timestamp, partial_amount, safety_deposit_apt, resolver_data.factory_addr
+        );
+        
+        // Deposit tokens to escrow
+        escrow::deposit_coins<CoinType>(tokens, escrow_addr);
+        
+        let order_hash_copy = escrow::get_order_hash(&immutables);
+        
+        event::emit_event(&mut resolver_data.dst_escrow_deployed_events, DstEscrowDeployedEvent {
+            escrow_address: escrow_addr,
+            order_hash: order_hash_copy,
+        });
+        
+        event::emit_event(&mut resolver_data.partial_fill_executed_events, PartialFillExecutedEvent {
+            escrow_address: escrow_addr,
+            order_hash: order_hash_copy,
+            partial_amount,
+        });
+    }
+
     // Deploy source escrow with partial fill
     public fun deploy_src_partial<CoinType>(
         resolver_signer: &signer,
@@ -80,7 +134,7 @@ module aptos_addr::resolver {
         
         let escrow_addr = if (existing_escrow == @0x0) {
             // First resolver - create escrow and fill order
-            let escrow_addr = escrow_factory::create_src_escrow_partial<CoinType>(
+            let escrow_addr = escrow_factory::create_src_escrow_partial_internal<CoinType>(
                 resolver_signer, immutables, partial_amount, safety_deposit, resolver_data.factory_addr
             );
             
@@ -97,7 +151,7 @@ module aptos_addr::resolver {
             escrow_addr
         } else {
             // Subsequent resolver - add to existing escrow
-            let escrow_addr = escrow_factory::create_src_escrow_partial<CoinType>(
+            let escrow_addr = escrow_factory::create_src_escrow_partial_internal<CoinType>(
                 resolver_signer, immutables, partial_amount, safety_deposit, resolver_data.factory_addr
             );
             
@@ -108,41 +162,6 @@ module aptos_addr::resolver {
             
             escrow_addr
         };
-        
-        event::emit_event(&mut resolver_data.partial_fill_executed_events, PartialFillExecutedEvent {
-            escrow_address: escrow_addr,
-            order_hash,
-            partial_amount,
-        });
-    }
-
-    // Deploy destination escrow with partial fill
-    public fun deploy_dst_partial<CoinType>(
-        resolver_signer: &signer,
-        immutables: Immutables,
-        src_cancellation_timestamp: u64,
-        partial_amount: u64,
-        safety_deposit: Coin<AptosCoin>,
-        tokens: Coin<CoinType>,
-        resolver_addr: address,
-    ) acquires Resolver {
-        let resolver_data = borrow_global_mut<Resolver>(resolver_addr);
-        assert!(signer::address_of(resolver_signer) == resolver_data.owner, E_NOT_AUTHORIZED);
-        
-        let order_hash = escrow::get_order_hash(&immutables);
-        
-        // Create destination escrow
-        let escrow_addr = escrow_factory::create_dst_escrow_partial<CoinType>(
-            resolver_signer, immutables, src_cancellation_timestamp, partial_amount, safety_deposit, resolver_data.factory_addr
-        );
-        
-        // Deposit tokens to escrow
-        escrow::deposit_coins<CoinType>(tokens, escrow_addr);
-        
-        event::emit_event(&mut resolver_data.dst_escrow_deployed_events, DstEscrowDeployedEvent {
-            escrow_address: escrow_addr,
-            order_hash,
-        });
         
         event::emit_event(&mut resolver_data.partial_fill_executed_events, PartialFillExecutedEvent {
             escrow_address: escrow_addr,
@@ -171,7 +190,6 @@ module aptos_addr::resolver {
         let caller_addr = signer::address_of(caller);
         escrow::cancel<CoinType>(caller_addr, immutables, escrow_addr);
     }
-
 
     // View functions
     #[view]
