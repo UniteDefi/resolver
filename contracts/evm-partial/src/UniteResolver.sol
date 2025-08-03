@@ -11,6 +11,7 @@ import "./interfaces/IBaseEscrow.sol";
 import "./interfaces/IEscrow.sol";
 import "./libraries/TimelocksLib.sol";
 import "./libraries/ImmutablesLib.sol";
+import "./libraries/DutchAuctionLib.sol";
 import "./interfaces/IUniteOrderProtocol.sol";
 import "./interfaces/IUniteOrder.sol";
 
@@ -22,6 +23,9 @@ contract UniteResolver is Ownable {
     error InvalidLength();
     error LengthMismatch();
     error TransferFailed();
+    error OrderCompleted();
+    error InsufficientApproval();
+    error InvalidSrcAmount();
 
     IEscrowFactory private immutable _FACTORY;
     IOrderMixin private immutable _LOP;
@@ -31,6 +35,8 @@ contract UniteResolver is Ownable {
     event DstEscrowDeployed(address indexed escrow, bytes32 indexed orderHash);
     event Debug(string message, address addr);
     event PartialFillExecuted(address indexed escrow, bytes32 indexed orderHash, uint256 partialAmount);
+    event TokenApproved(address indexed token, uint256 amount);
+    event OrderFilled(bytes32 indexed orderHash, uint256 srcAmount, uint256 destAmount, uint256 currentPrice);
 
     constructor(IEscrowFactory factory, IOrderMixin lop, address initialOwner) Ownable(initialOwner) {
         _FACTORY = factory;
@@ -225,6 +231,71 @@ contract UniteResolver is Ownable {
         
         emit DstEscrowDeployed(escrowAddress, immutables.orderHash);
         emit PartialFillExecuted(escrowAddress, immutables.orderHash, partialAmount);
+    }
+
+    // Pre-approve tokens for Dutch auction orders
+    function approveToken(address token, uint256 amount) external onlyOwner {
+        IERC20(token).approve(address(this), amount);
+        emit TokenApproved(token, amount);
+    }
+
+    // Fill order with Dutch auction pricing - resolvers call this instead of deployDstPartial
+    function fillOrder(
+        IBaseEscrow.Immutables calldata immutables,
+        IOrderMixin.Order calldata order,
+        uint256 srcCancellationTimestamp,
+        uint256 srcAmount
+    ) external payable {
+        if (srcAmount == 0) revert InvalidSrcAmount();
+        
+        // Convert to simple order format
+        IUniteOrder.Order memory simpleOrder = _convertOrder(order);
+        bytes32 orderHash = _SOP.hashOrder(simpleOrder);
+        
+        // Check if order is already completed
+        if (_LOP.isOrderFullyFilled(orderHash)) revert OrderCompleted();
+        
+        // Check remaining amount
+        uint256 remainingAmount = _LOP.getRemainingAmountByOrder(order);
+        if (srcAmount > remainingAmount) revert InvalidSrcAmount();
+        
+        // Calculate destination amount based on current Dutch auction price
+        uint256 destAmount = DutchAuctionLib.calculateTakingAmount(
+            srcAmount,
+            order.startPrice,
+            order.endPrice,
+            order.auctionStartTime,
+            order.auctionEndTime,
+            block.timestamp
+        );
+        
+        // Get current price for event
+        uint256 currentPrice = DutchAuctionLib.getCurrentPrice(
+            order.startPrice,
+            order.endPrice,
+            order.auctionStartTime,
+            order.auctionEndTime,
+            block.timestamp
+        );
+        
+        // Deploy destination escrow with safety deposit
+        address escrowAddress = _FACTORY.createDstEscrowPartialFor{value: msg.value}(
+            immutables, 
+            srcCancellationTimestamp, 
+            destAmount, 
+            msg.sender
+        );
+        
+        // Transfer destination tokens from resolver to escrow using pre-approval
+        address token = address(uint160(immutables.token));
+        IERC20(token).safeTransferFrom(msg.sender, escrowAddress, destAmount);
+        
+        // Update fill tracking in LimitOrderProtocol
+        _LOP.updateFillAmount(order, srcAmount);
+        
+        emit DstEscrowDeployed(escrowAddress, immutables.orderHash);
+        emit PartialFillExecuted(escrowAddress, immutables.orderHash, destAmount);
+        emit OrderFilled(orderHash, srcAmount, destAmount, currentPrice);
     }
 
     function withdraw(IEscrow escrow, bytes32 secret, IBaseEscrow.Immutables calldata immutables) external {
