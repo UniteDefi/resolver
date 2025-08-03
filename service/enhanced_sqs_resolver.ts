@@ -137,9 +137,8 @@ export class EnhancedSQSResolverService {
   private initializeChainConfigs() {
     const evmDeployments = allDeployments.evm;
 
-    // Process Ethereum Sepolia
-    if (evmDeployments.eth_sepolia) {
-      const deployment = evmDeployments.eth_sepolia;
+    // Process all EVM chains from deployments
+    for (const [networkKey, deployment] of Object.entries(evmDeployments)) {
       const config: ChainConfig = {
         chainId: deployment.chainId,
         name: deployment.name,
@@ -147,90 +146,20 @@ export class EnhancedSQSResolverService {
         wrappedNative: deployment.MockWrappedNative,
         usdt: deployment.MockUSDT,
         dai: deployment.MockDAI,
-        escrowFactory: deployment.EscrowFactory,
-        limitOrderProtocol: deployment.LimitOrderProtocol,
+        escrowFactory: deployment.UniteEscrowFactory,
+        limitOrderProtocol: deployment.UniteLimitOrderProtocol,
         resolverContracts: [
-          deployment.Resolver_A,
-          deployment.Resolver_B,
-          deployment.Resolver_C,
-          deployment.Resolver_D
+          deployment.UniteResolver0,
+          deployment.UniteResolver1,
+          deployment.UniteResolver2,
+          deployment.UniteResolver3
         ].filter(Boolean)
       };
       this.chainConfigs.set(deployment.chainId, config);
       const provider = new JsonRpcProvider(config.rpcUrl);
       this.providers.set(deployment.chainId, provider);
-    }
-
-    // Process Base Sepolia
-    if (evmDeployments.base_sepolia) {
-      const deployment = evmDeployments.base_sepolia;
-      const config: ChainConfig = {
-        chainId: deployment.chainId,
-        name: deployment.name,
-        rpcUrl: this.getRpcUrl(deployment.chainId),
-        wrappedNative: deployment.MockWrappedNative,
-        usdt: deployment.MockUSDT,
-        dai: deployment.MockDAI,
-        escrowFactory: deployment.EscrowFactory,
-        limitOrderProtocol: deployment.LimitOrderProtocol,
-        resolverContracts: [
-          deployment.Resolver_A,
-          deployment.Resolver_B,
-          deployment.Resolver_C,
-          deployment.Resolver_D
-        ].filter(Boolean)
-      };
-      this.chainConfigs.set(deployment.chainId, config);
-      const provider = new JsonRpcProvider(config.rpcUrl);
-      this.providers.set(deployment.chainId, provider);
-    }
-
-    // Process Arbitrum Sepolia
-    if (evmDeployments.arb_sepolia) {
-      const deployment = evmDeployments.arb_sepolia;
-      const config: ChainConfig = {
-        chainId: deployment.chainId,
-        name: deployment.name,
-        rpcUrl: this.getRpcUrl(deployment.chainId),
-        wrappedNative: deployment.MockWrappedNative,
-        usdt: deployment.MockUSDT,
-        dai: deployment.MockDAI,
-        escrowFactory: deployment.EscrowFactory,
-        limitOrderProtocol: deployment.LimitOrderProtocol,
-        resolverContracts: [
-          deployment.Resolver_A,
-          deployment.Resolver_B,
-          deployment.Resolver_C,
-          deployment.Resolver_D
-        ].filter(Boolean)
-      };
-      this.chainConfigs.set(deployment.chainId, config);
-      const provider = new JsonRpcProvider(config.rpcUrl);
-      this.providers.set(deployment.chainId, provider);
-    }
-
-    // Process Monad Testnet
-    if (evmDeployments.monad_testnet) {
-      const deployment = evmDeployments.monad_testnet;
-      const config: ChainConfig = {
-        chainId: deployment.chainId,
-        name: deployment.name,
-        rpcUrl: this.getRpcUrl(deployment.chainId),
-        wrappedNative: deployment.MockWrappedNative,
-        usdt: deployment.MockUSDT,
-        dai: deployment.MockDAI,
-        escrowFactory: deployment.EscrowFactory,
-        limitOrderProtocol: deployment.LimitOrderProtocol,
-        resolverContracts: [
-          deployment.Resolver_A,
-          deployment.Resolver_B,
-          deployment.Resolver_C,
-          deployment.Resolver_D
-        ].filter(Boolean)
-      };
-      this.chainConfigs.set(deployment.chainId, config);
-      const provider = new JsonRpcProvider(config.rpcUrl);
-      this.providers.set(deployment.chainId, provider);
+      
+      console.log(`[Resolver ${this.config.index}] Initialized chain ${deployment.name} (${deployment.chainId})`);
     }
   }
 
