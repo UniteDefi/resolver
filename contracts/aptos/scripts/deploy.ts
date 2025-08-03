@@ -103,7 +103,7 @@ async function deployUniteProtocol(): Promise<DeploymentAddresses> {
   }
 
   // Update Move.toml with the actual address
-  const moveTomlPath = path.join(__dirname, "..", "Move.toml");
+  const moveTomlPath = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "Move.toml");
   let moveTomlContent = fs.readFileSync(moveTomlPath, "utf8");
   moveTomlContent = moveTomlContent.replace(
     'aptos_addr = "_"',
@@ -116,7 +116,7 @@ async function deployUniteProtocol(): Promise<DeploymentAddresses> {
   console.log("[Deploy] Compiling Move modules...");
   try {
     execSync("aptos move compile", {
-      cwd: path.join(__dirname, ".."),
+      cwd: path.join(path.dirname(new URL(import.meta.url).pathname), ".."),
       stdio: "inherit",
     });
     console.log("[Deploy] Compilation successful");
@@ -140,7 +140,7 @@ async function deployUniteProtocol(): Promise<DeploymentAddresses> {
       --skip-fetch-latest-git-deps`;
       
     execSync(publishCommand, {
-      cwd: path.join(__dirname, ".."),
+      cwd: path.join(path.dirname(new URL(import.meta.url).pathname), ".."),
       stdio: "inherit",
     });
 
@@ -488,7 +488,7 @@ async function saveDeployment() {
     const addresses = await deployUniteProtocol();
     
     // Load existing deployments
-    const deploymentsPath = path.join(__dirname, "..", "deployments.json");
+    const deploymentsPath = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "deployments.json");
     let deployments: any = {};
     
     if (fs.existsSync(deploymentsPath)) {
@@ -517,7 +517,7 @@ async function saveDeployment() {
 }
 
 // Run deployment if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   saveDeployment();
 }
 
